@@ -219,7 +219,7 @@ class _WebViewAppState extends State<WebViewApp> {
   late final WebViewController controller;
 
   //example of other uri: https://flutter.dev
-  final building_uri = 'https://api-dev.rokwire.illinois.edu/wayfinding/floorplan?bldgid=0003&floor=01';
+  final building_uri = 'https://api-dev.rokwire.illinois.edu/gateway/api/wayfinding/floorplan?bldgid=0003&floor=01';
   @override
   void initState() {
     super.initState();
