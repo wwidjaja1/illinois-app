@@ -251,15 +251,17 @@ class _WebViewAppState extends State<WebViewApp> {
   }
 
 
+
   @override
   void initState() {
     super.initState();
     Future<String> response_body = getFloorplanData(url);
     print(response_body);
-    controller = WebViewController()
-      ..loadRequest(
-        Uri.parse(url),
-      );
+    controller = WebViewController();
+    //   ..loadRequest(
+    //     Uri.parse(url),
+    //   );
+    controller.loadHtmlString(kExamplePage);
   }
 
   @override
@@ -273,4 +275,36 @@ class _WebViewAppState extends State<WebViewApp> {
       ),
     );
   }
+}
+
+const String kExamplePage = '''
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+  <title>Load file or HTML string example</title>
+  </head>
+  <body>
+
+  <h1>Local demo page</h1>
+  <p>
+  This is an example page used to demonstrate how to load a local file or HTML
+  string using the <a href="https://pub.dev/packages/webview_flutter">Flutter
+  webview</a> plugin.
+  </p>
+  
+  <p>Below is a simple svg embedded in the HTML. It fits within inline code. We want to replace that with
+  a floor plan svg from the http response. This svg is a rather long string. We may want to
+  put it in a variable.
+  </p>
+  <svg width="100" height="100">
+  <circle cx="50" cy="50" r="40" stroke="green" stroke-width="4" fill="yellow" />
+</svg>
+
+  </body>
+  </html>
+  ''' ;
+
+Future<void> _onLoadHtmlStringExample(
+    WebViewController controller, BuildContext context) async {
+  await controller.loadHtmlString(kExamplePage);
 }
