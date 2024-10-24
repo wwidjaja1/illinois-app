@@ -12,6 +12,11 @@ import 'package:rokwire_plugin/service/localization.dart';
 import 'package:rokwire_plugin/service/styles.dart';
 import 'package:illinois/ui/widgets/TabBar.dart' as uiuc;
 import 'package:rokwire_plugin/utils/utils.dart';
+import 'package:webview_flutter/webview_flutter.dart';
+import 'package:http/http.dart' as http;
+import 'package:illinois/service/Auth2.dart';
+import 'package:rokwire_plugin/service/network.dart';
+import 'dart:convert';
 
 class ExploreBuildingDetailPanel extends StatefulWidget with AnalyticsInfo {
   final Building? building;
@@ -203,5 +208,77 @@ class _ExploreBuildingDetailPanelState extends State<ExploreBuildingDetailPanel>
   void _onFloorPlansAndAmenities() {
     Analytics().logSelect(target: "Floor Plans & Amenities");
     // TODO: present the relevant UI
+  }
+}
+
+void open_webview() {
+  runApp(
+    MaterialApp(
+      theme: ThemeData(useMaterial3: true),
+      home: const WebViewApp(),
+    ),
+  );
+}
+
+class WebViewApp extends StatefulWidget {
+  const WebViewApp({super.key});
+
+  @override
+  State<WebViewApp> createState() => _WebViewAppState();
+}
+
+class _WebViewAppState extends State<WebViewApp> {
+  late final WebViewController controller;
+
+  //examples of other uri: https://flutter.dev,
+  // https://api-dev.rokwire.illinois.edu/gateway/api/wayfinding/floorplan?bldgid=0003&floor=01,
+  // https://web.housing.illinois.edu/test.svg
+  // https://api-dev.rokwire.illinois.edu/gateway/api/wayfinding/buildings
+  String url = 'https://api-dev.rokwire.illinois.edu/gateway/api/wayfinding/floorplan?bldgid=0003&floor=01';
+  //String url = 'https://api-dev.rokwire.illinois.edu/gateway/api/wayfinding/buildings';
+
+  Future<String> getFloorplanData(url) async {
+    // Make the GET request
+    http.Response? response = await Network().get(url, auth: Auth2());
+
+    // Process the response
+    if (response?.statusCode == 200) {
+      //Request successful, handle the response data
+      String? response_body = response?.body;
+      var json_response_body = jsonDecode(response_body!);
+
+      print('This Floorplan svg: ${json_response_body['svg']}');
+      return json_response_body;
+    } else {
+      // Request failed
+      print('Failed to get floorplan. Status code: ${response?.statusCode}');
+    }
+
+    // Return the whole response
+    return '${response?.body}';
+  }
+
+
+  @override
+  void initState() {
+    super.initState();
+    Future<String> response_body = getFloorplanData(url);
+    print(response_body);
+    controller = WebViewController()
+      ..loadRequest(
+        Uri.parse(url),
+      );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Building Floor Plan'),
+      ),
+      body: WebViewWidget(
+        controller: controller,
+      ),
+    );
   }
 }
