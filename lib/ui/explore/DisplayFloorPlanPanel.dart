@@ -24,7 +24,25 @@ class _DisplayFloorPlanPanelState extends State<DisplayFloorPlanPanel> {
   @override
   void initState() {
     super.initState();
-    _controller = WebViewController();
+    _controller = WebViewController()
+    //Enable Javascript for this WebView
+    ..setJavaScriptMode(JavaScriptMode.unrestricted) // Enable JavaScript
+    ..setBackgroundColor(Colors.transparent) // Optional: Transparent background
+    ..setNavigationDelegate(
+    NavigationDelegate(
+    onPageStarted: (_) {
+    setState(() {
+    _isLoading = true; // Show loading indicator
+    });
+    },
+    onPageFinished: (_) {
+    setState(() {
+    _isLoading = false; // Hide loading indicator
+    });
+    },
+    ),
+    );
+
 
     // Initialize only if building is provided
     if (widget.building != null) {
@@ -50,7 +68,92 @@ class _DisplayFloorPlanPanelState extends State<DisplayFloorPlanPanel> {
       floorId: floorCode,
     );
 
+    // Assuming floorPlanSvg contains your SVG string
     String? floorPlanSvg = floorPlanData?['svg'] ?? null;
+    String? addButtonsPerAmenity = """
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Floor Plan</title>
+</head>
+<body>
+  <!-- Render the SVG -->
+  <div id="svg-container">$floorPlanSvg</div>
+
+  <!-- Add buttons dynamically -->
+  <script>
+    // Get the SVG content from the container
+    const svgContainer = document.getElementById('svg-container');
+    const floorPlanSvg = svgContainer.innerHTML; // Extract SVG content
+
+    // Parse the SVG string into a DOM object
+    const parser = new DOMParser();
+    const svgDoc = parser.parseFromString(floorPlanSvg, 'image/svg+xml');
+
+    // Get all <g> elements
+    const gElements = svgDoc.querySelectorAll('g');
+
+    // Create a Set to store unique aria-labels
+    const uniqueAriaLabels = new Set();
+
+    // Iterate through <g> elements
+    for (const g of gElements) {
+      // Add visibility='visible' if missing
+      if (!g.hasAttribute('visibility')) {
+        g.setAttribute('visibility', 'visible');
+      }
+
+      // Collect unique aria-labels (amenities)
+      const ariaLabel = g.getAttribute('aria-label');
+      if (ariaLabel) {
+        uniqueAriaLabels.add(ariaLabel);
+      }
+    }
+
+    // Create buttons for each aria-label (amenity)
+    const buttonsContainer = document.createElement('div');
+
+    uniqueAriaLabels.forEach((label) => {
+      const button = document.createElement('button');
+      button.textContent = label; // Button name is the aria-label
+      button.setAttribute('data-aria-label', label);
+      buttonsContainer.appendChild(button);
+    });
+
+    // Append the buttons container to the document body (or any other container)
+    document.body.appendChild(buttonsContainer);
+
+    // Add click event listeners to toggle visibility for each button
+    uniqueAriaLabels.forEach((label) => {
+      const button = document.querySelector(`button[data-aria-label="\${label}"]`);
+
+      button.addEventListener('click', () => {
+        gElements.forEach((g) => {
+          if (g.getAttribute('aria-label') === label) {
+            // Toggle visibility attribute
+            const currentVisibility = g.getAttribute('visibility');
+            g.setAttribute('visibility', currentVisibility === 'visible' ? 'hidden' : 'visible');
+          }
+        });
+
+        // Serialize the updated SVG back to a string
+        const serializer = new XMLSerializer();
+        const updatedFloorPlanSvg = serializer.serializeToString(svgDoc);
+
+        // Find the existing <svg> element in the DOM
+        const svgElement = document.querySelector('#svg-container svg');
+
+        if (svgElement) {
+          // Replace the content of the <svg> element with the updated SVG
+          svgElement.outerHTML = updatedFloorPlanSvg;
+        }
+      });
+    });
+  </script>
+</body>
+</html>
+""";
+    debugPrint(addButtonsPerAmenity);
 
     if (!mounted) return;
     setState(() {
@@ -58,7 +161,7 @@ class _DisplayFloorPlanPanelState extends State<DisplayFloorPlanPanel> {
       if (floorPlanSvg == null) {
         _htmlWithFloorPlan = '${Localization().getStringEx('panel.display_floor_plan_panel.html_svg_header', 'Floor Plan')} ${Localization().getStringEx('panel.display_floor_plan_panel.html_error', 'No Floor Plan')} ${Localization().getStringEx('panel.display_floor_plan_panel.html_svg_footer', 'Floor Plan')}';
       } else {
-        _htmlWithFloorPlan = '${Localization().getStringEx('panel.display_floor_plan_panel.html_svg_header', 'Floor Plan')} $floorPlanSvg ${Localization().getStringEx('panel.display_floor_plan_panel.html_svg_footer', 'Floor Plan')}';
+        _htmlWithFloorPlan = '$addButtonsPerAmenity ${Localization().getStringEx('panel.display_floor_plan_panel.html_svg_footer', 'Floor Plan')}';
       }
       _controller.loadHtmlString(_htmlWithFloorPlan);
     });
@@ -73,6 +176,7 @@ class _DisplayFloorPlanPanelState extends State<DisplayFloorPlanPanel> {
       });
     }
   }
+
 
   void viewNextFloor(int direction) {
     List<String>? floors = widget.building?.floors;
@@ -216,3 +320,5 @@ class _DisplayFloorPlanPanelState extends State<DisplayFloorPlanPanel> {
     );
   }
 }
+
+
