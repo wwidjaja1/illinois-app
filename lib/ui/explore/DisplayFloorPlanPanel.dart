@@ -124,31 +124,39 @@ class _DisplayFloorPlanPanelState extends State<DisplayFloorPlanPanel> {
     document.body.appendChild(buttonsContainer);
 
     // Add click event listeners to toggle visibility for each button
-    uniqueAriaLabels.forEach((label) => {
-      const button = document.querySelector(`button[data-aria-label="\${label}"]`);
+uniqueAriaLabels.forEach((label) => {
+  const button = document.querySelector(`button[data-aria-label="\${label}"]`);
 
-      button.addEventListener('click', () => {
-        gElements.forEach((g) => {
-          if (g.getAttribute('aria-label') === label) {
-            // Toggle visibility attribute
-            const currentVisibility = g.getAttribute('visibility');
-            g.setAttribute('visibility', currentVisibility === 'visible' ? 'hidden' : 'visible');
-          }
+  button.addEventListener('click', () => {
+    gElements.forEach((g) => {
+      if (g.getAttribute('aria-label') === label) {
+        // Toggle visibility attribute
+        const currentVisibility = g.getAttribute('visibility');
+        const newVisibility = currentVisibility === 'visible' ? 'hidden' : 'visible';
+        g.setAttribute('visibility', newVisibility);
+
+        // Ensure all child elements also respect the new visibility
+        const childElements = g.querySelectorAll('*');
+        childElements.forEach((child) => {
+          child.setAttribute('visibility', newVisibility);
         });
-
-        // Serialize the updated SVG back to a string
-        const serializer = new XMLSerializer();
-        const updatedFloorPlanSvg = serializer.serializeToString(svgDoc);
-
-        // Find the existing <svg> element in the DOM
-        const svgElement = document.querySelector('#svg-container svg');
-
-        if (svgElement) {
-          // Replace the content of the <svg> element with the updated SVG
-          svgElement.outerHTML = updatedFloorPlanSvg;
-        }
-      });
+      }
     });
+
+    // Serialize the updated SVG back to a string
+    const serializer = new XMLSerializer();
+    const updatedFloorPlanSvg = serializer.serializeToString(svgDoc);
+
+    // Find the existing <svg> element in the DOM
+    const svgElement = document.querySelector('#svg-container svg');
+
+    if (svgElement) {
+      // Replace the content of the <svg> element with the updated SVG
+      svgElement.outerHTML = updatedFloorPlanSvg;
+    }
+  });
+});
+
   </script>
 </body>
 </html>
