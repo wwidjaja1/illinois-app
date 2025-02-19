@@ -158,6 +158,22 @@ uniqueAriaLabels.forEach((label) => {
 });
 
   </script>
+  <style>
+    /* Default button styles */
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      border: none;
+      cursor: pointer;
+      background-color: #ffa500;
+      transition: background-color 0.3s ease;
+    }
+
+    /* Change color on click */
+    button:active {
+      background-color: #ffbf00;
+    }
+  </style>
 </body>
 </html>
 """;
