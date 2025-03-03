@@ -98,6 +98,7 @@ class _Event2DetailPanelState extends Event2Selector2State<Event2DetailPanel> im
   bool _onlineLaunching = false;
 
   List<String>? _displayCategories;
+  Map<String?, GestureRecognizer> _contactGestureRecognizers = <String?, GestureRecognizer>{};
 
   @override
   void initState() {
@@ -128,6 +129,9 @@ class _Event2DetailPanelState extends Event2Selector2State<Event2DetailPanel> im
   @override
   void dispose() {
     NotificationService().unsubscribe(this);
+    for (GestureRecognizer gestureRecognizer in _contactGestureRecognizers.values) {
+      gestureRecognizer.dispose();
+    }
     super.dispose();
   }
 
@@ -572,34 +576,42 @@ class _Event2DetailPanelState extends Event2Selector2State<Event2DetailPanel> im
     ] : null;
   }
 
-  List<Widget>? get _contactsDetailWidget{
-    if(CollectionUtils.isEmpty(_event?.contacts))
-      return null;
+  List<Widget>? get _contactsDetailWidget {
+    List<Event2Contact>? contacts = _event?.contacts;
+    if ((contacts != null) && contacts.isNotEmpty) {
+      List<Widget> contactList = [];
+      contactList.add(_buildTextDetailWidget(Localization().getStringEx('panel.event2.detail.general.contacts.title', 'Contacts'), 'person'));
 
-    List<Widget> contactList = [];
-    contactList.add(_buildTextDetailWidget(Localization().getStringEx('panel.event2.detail.general.contacts.title', 'Contacts'), 'person'));
-
-    for (Event2Contact? contact in _event!.contacts!) {
-      String? details =  event2ContactToDisplayString(contact);
-      if(StringUtils.isNotEmpty(details)){
-      contactList.add(
-          _buildDetailWidget(
-        // Text(details?? '', style: Styles().textStyles.getTextStyle('widget.explore.card.detail.regular.underline')),
-              RichText(textScaler: MediaQuery.of(context).textScaler, text:
-                TextSpan(style: Styles().textStyles.getTextStyle("common.body"), children: <TextSpan>[
-                  TextSpan(text: StringUtils.isNotEmpty(contact?.firstName)?"${contact?.firstName}, " : ""),
-                  TextSpan(text: StringUtils.isNotEmpty(contact?.lastName)?"${contact?.lastName}, " : ""),
-                  TextSpan(text: StringUtils.isNotEmpty(contact?.organization)?"${contact?.organization}, " : ""),
-                  TextSpan(text: StringUtils.isNotEmpty(contact?.email)?"${contact?.email}, " : "", style: Styles().textStyles.getTextStyle('common.body.underline'), recognizer: TapGestureRecognizer()..onTap = () => _onContactEmail(contact?.email),),
-                  TextSpan(text: StringUtils.isNotEmpty(contact?.phone)?"${contact?.phone}, " : "", style: Styles().textStyles.getTextStyle('common.body.underline'), recognizer: TapGestureRecognizer()..onTap = () => _onContactPhone(contact?.phone),),
-            ])),
-            'person', iconVisible: false, detailPadding: EdgeInsets.zero));
+      for (Event2Contact contact in contacts) {
+        String? details =  event2ContactToDisplayString(contact);
+        if(StringUtils.isNotEmpty(details)){
+        contactList.add(
+            _buildDetailWidget(
+          // Text(details?? '', style: Styles().textStyles.getTextStyle('widget.explore.card.detail.regular.underline')),
+                RichText(textScaler: MediaQuery.of(context).textScaler, text:
+                  TextSpan(style: Styles().textStyles.getTextStyle("common.body"), children: <TextSpan>[
+                    if (StringUtils.isNotEmpty(contact.firstName))
+                      TextSpan(text: contact.firstName ?? ""),
+                    if (StringUtils.isNotEmpty(contact.lastName))
+                      TextSpan(text: contact.lastName ?? ""),
+                    if (StringUtils.isNotEmpty(contact.organization))
+                      TextSpan(text: contact.organization ?? ""),
+                    if (StringUtils.isNotEmpty(contact.email))
+                      TextSpan(text: contact.email ?? "", style: Styles().textStyles.getTextStyle('common.body.underline'), recognizer: _contactGestureRecognizers[contact.email] ??= TapGestureRecognizer()..onTap = () => _onContactEmail(contact.email),),
+                    if (StringUtils.isNotEmpty(contact.phone))
+                      TextSpan(text: contact.phone ?? "", style: Styles().textStyles.getTextStyle('common.body.underline'), recognizer: _contactGestureRecognizers[contact.phone] ??= TapGestureRecognizer()..onTap = () => _onContactPhone(contact.phone),),
+              ])),
+              'person', iconVisible: false, detailPadding: EdgeInsets.zero));
+        }
       }
+
+      contactList.add( _detailSpacerWidget);
+
+      return contactList;
     }
-
-    contactList.add( _detailSpacerWidget);
-
-    return contactList;
+    else {
+      return null;
+    }
   }
 
   List<Widget>? get _adminCommandsButton => _isAdmin? <Widget>[
@@ -753,7 +765,7 @@ class _Event2DetailPanelState extends Event2Selector2State<Event2DetailPanel> im
       else if (_event?.isRecurring == true) {
         // Available Times
         message = (_linkedEvents != null) ?
-          Localization().getStringEx('panel.event2.detail.linked_events.recurrence.failed.message', 'There are no upcoming available times.') :
+          Localization().getStringEx('panel.event2.detail.linked_events.recurrence.empty.message', 'There are no upcoming available times.') :
           Localization().getStringEx('panel.event2.detail.linked_events.recurrence.failed.message', 'Failed to load available times.');
       }
       cardWidgets.add(_linkedEventsMessageCard(message ?? ''));
@@ -899,17 +911,17 @@ class _Event2DetailPanelState extends Event2Selector2State<Event2DetailPanel> im
   //Actions
 
   void _onLocation() {
-    Analytics().logSelect(target: "Location Directions: ${_event?.name}");
+    Analytics().logSelect(target: "Location Directions", attributes: _event?.analyticsAttributes);
     _event?.launchDirections();
   }
 
   void _onOnline() {
-    Analytics().logSelect(target: "Online Url: ${_event?.name}");
+    Analytics().logSelect(target: "Online Url", attributes: _event?.analyticsAttributes);
     _launchUrl(_event?.onlineDetails?.url, updateProgress: (bool value) => setStateDelayedIfMounted(() { _onlineLaunching = value; }));
   }
 
   void _onFavorite() {
-    Analytics().logSelect(target: "Favorite: ${_event?.name}");
+    Analytics().logSelect(target: "Favorite", attributes: _event?.analyticsAttributes);
     Auth2().prefs?.toggleFavorite(_event);
   }
 
@@ -936,12 +948,12 @@ class _Event2DetailPanelState extends Event2Selector2State<Event2DetailPanel> im
   }
 
   void _onWebsiteButton() {
-    Analytics().logSelect(target: 'Website');
+    Analytics().logSelect(target: 'Website', attributes: _event?.analyticsAttributes);
     _launchUrl(_event?.eventUrl, updateProgress: (bool value) => setStateDelayedIfMounted(() { _websiteLaunching = value; }));
   }
 
   void _onLinkedEvent(Event2 event) {
-    Analytics().logSelect(target: event.name);
+    Analytics().logSelect(target: "Linked Event", attributes: event.analyticsAttributes);
     Navigator.push(context, CupertinoPageRoute(builder: (context) => Event2DetailPanel(event: event,
       userLocation: _userLocation,
       eventSelector:  widget.eventSelector,
@@ -951,7 +963,7 @@ class _Event2DetailPanelState extends Event2Selector2State<Event2DetailPanel> im
   }
 
   void _onSuperEvent() {
-    Analytics().logSelect(target: _superEvent?.name);
+    Analytics().logSelect(target: "Super Event", attributes: _superEvent?.analyticsAttributes);
     if (widget.superEvent?.id == _superEvent?.id) {
       Navigator.of(context).pop();
     }
@@ -965,7 +977,7 @@ class _Event2DetailPanelState extends Event2Selector2State<Event2DetailPanel> im
   }
 
   void _onRegister() {
-    Analytics().logSelect(target: 'Register me');
+    Analytics().logSelect(target: 'Register me', attributes: _event?.analyticsAttributes);
     _performRegistration(Events2().registerToEvent, onSuccess: (Event2 event) {
       if (Auth2().isFavorite(event)) {
         Event2Popup.showMessage(context,
@@ -989,7 +1001,7 @@ class _Event2DetailPanelState extends Event2Selector2State<Event2DetailPanel> im
   }
 
   void _onUnregister() {
-    Analytics().logSelect(target: 'Unregister me');
+    Analytics().logSelect(target: 'Unregister me', attributes: _event?.analyticsAttributes);
     _performRegistration(Events2().unregisterFromEvent, onSuccess: (Event2 event) {
       Event2Popup.showMessage(context,
         title: Localization().getStringEx("dialog.success.title", "Success"),
@@ -1028,12 +1040,12 @@ class _Event2DetailPanelState extends Event2Selector2State<Event2DetailPanel> im
   }
 
   void _onExternalRegistration(){
-    Analytics().logSelect(target: 'Register me');
+    Analytics().logSelect(target: 'Register me', attributes: _event?.analyticsAttributes);
     _launchUrl(_event?.registrationDetails?.externalLink, updateProgress: (bool value) => setStateDelayedIfMounted(() { _registrationLaunching = value; }));
   }
 
   void _onFollowUpSurvey(){
-    Analytics().logSelect(target: "Follow up survey");
+    Analytics().logSelect(target: "Follow up survey", attributes: _event?.analyticsAttributes);
     Survey displaySurvey = Survey.fromOther(_survey!);
     displaySurvey.replaceKey('event_name', _event?.name);
     Navigator.push(context, CupertinoPageRoute(builder: (context) =>
@@ -1057,6 +1069,7 @@ class _Event2DetailPanelState extends Event2Selector2State<Event2DetailPanel> im
     }
   }  
   void _onAddToCalendar(){
+    Analytics().logSelect(target: "Add to Calendar", attributes: _event?.analyticsAttributes);
     DeviceCalendar().addToCalendar(context, _event);
   }
 
@@ -1066,12 +1079,14 @@ class _Event2DetailPanelState extends Event2Selector2State<Event2DetailPanel> im
   }
 
   void _onContactEmail(String? email){
+    Analytics().logSelect(target: Analytics.LogAnonymousEmail, attributes: _event?.analyticsAttributes);
     if(StringUtils.isNotEmpty(email)) {
       _launchUrl("mailto:$email");
     }
   }
 
   void _onContactPhone(String? phone){
+    Analytics().logSelect(target: Analytics.LogAnonymousPhone, attributes: _event?.analyticsAttributes);
     if(StringUtils.isNotEmpty(phone)) {
       _launchUrl("tel:$phone");
     }
@@ -1086,7 +1101,7 @@ class _Event2DetailPanelState extends Event2Selector2State<Event2DetailPanel> im
   }
 
   void _onAdminCommands(){
-    Analytics().logSelect(target: "Admin settings");
+    Analytics().logSelect(target: "Admin settings", attributes: _event?.analyticsAttributes);
     showModalBottomSheet(
         context: context,
         backgroundColor: Colors.white,
@@ -1099,7 +1114,7 @@ class _Event2DetailPanelState extends Event2Selector2State<Event2DetailPanel> im
   }
 
   void _onSettingEditEvent(){
-    Analytics().logSelect(target: "Edit event");
+    Analytics().logSelect(target: "Edit event", attributes: _event?.analyticsAttributes);
     Navigator.push<Event2SetupSurveyParam?>(context, CupertinoPageRoute(builder: (context) =>
       Event2CreatePanel(event: _event, survey: _survey)))
         .then((Event2SetupSurveyParam? result) {
@@ -1115,7 +1130,7 @@ class _Event2DetailPanelState extends Event2Selector2State<Event2DetailPanel> im
   }
 
   void _onSettingAdditionalSettings() {
-    Analytics().logSelect(target: "Additional Settings");
+    Analytics().logSelect(target: "Additional Settings", attributes: _event?.analyticsAttributes);
     if (_event != null) {
       Navigator.push(context, CupertinoPageRoute(builder: (context) => Event2AdminSettingsPanel(
         event: _event,
@@ -1124,7 +1139,7 @@ class _Event2DetailPanelState extends Event2Selector2State<Event2DetailPanel> im
   }
 
   void _onSettingEventRegistration(){
-    Analytics().logSelect(target: "Event Registration");
+    Analytics().logSelect(target: "Event Registration", attributes: _event?.analyticsAttributes);
     Navigator.push<dynamic>(context, CupertinoPageRoute(builder: (context) => Event2SetupRegistrationPanel(
       event: _event,
       analyticsFeature: widget.analyticsFeature,
@@ -1138,7 +1153,7 @@ class _Event2DetailPanelState extends Event2Selector2State<Event2DetailPanel> im
   }
 
   void _onSettingAttendance(){
-    Analytics().logSelect(target: "Event Attendance");
+    Analytics().logSelect(target: "Event Attendance", attributes: _event?.analyticsAttributes);
     Navigator.push<dynamic>(context, CupertinoPageRoute(builder: (context) => Event2SetupAttendancePanel(
       event: _event,
     ))).then((dynamic event) {
@@ -1151,7 +1166,7 @@ class _Event2DetailPanelState extends Event2Selector2State<Event2DetailPanel> im
   }
 
   void _onSettingSurvey(){
-    Analytics().logSelect(target: "Event Survey");
+    Analytics().logSelect(target: "Event Survey", attributes: _event?.analyticsAttributes);
     Event2SetupSurveyPanel.push(context,
       surveyParam: Event2SetupSurveyParam(
         event: _event,
@@ -1171,7 +1186,7 @@ class _Event2DetailPanelState extends Event2Selector2State<Event2DetailPanel> im
   }
 
   void _onSettingSurveyResponses() {
-    Analytics().logSelect(target: "Event Survey Responses");
+    Analytics().logSelect(target: "Event Survey Responses", attributes: _event?.analyticsAttributes);
     Navigator.push<Event2SetupSurveyParam?>(context, CupertinoPageRoute(builder: (context) => SurveyResponsesPanel(
       surveyId: _survey?.id,
       eventName: _event?.name,
@@ -1180,7 +1195,7 @@ class _Event2DetailPanelState extends Event2Selector2State<Event2DetailPanel> im
   }
 
   void _onSettingDeleteEvent(){
-    Analytics().logSelect(target: 'Delete Event');
+    Analytics().logSelect(target: 'Delete Event', attributes: _event?.analyticsAttributes);
 
     if (_eventId != null) {
       Event2Popup.showPrompt(context,
@@ -1228,7 +1243,7 @@ class _Event2DetailPanelState extends Event2Selector2State<Event2DetailPanel> im
   }
 
   void _onTapTakeAttendance() {
-    Analytics().logSelect(target: 'Take Attendance');
+    Analytics().logSelect(target: 'Take Attendance', attributes: _event?.analyticsAttributes);
     Navigator.push(context, CupertinoPageRoute(builder: (context) =>
       Event2AttendanceTakerPanel(_event, analyticsFeature: widget.analyticsFeature,)));
   }
@@ -1282,10 +1297,10 @@ class _Event2DetailPanelState extends Event2Selector2State<Event2DetailPanel> im
         futures.add(Events2().loadEventPeople(eventId));
       }
 
-      Event2Grouping? linkedEventsGrouping = _event?.linkedEventsGroupingQuery;
-      int? linkedEventsIndex = ((linkedEventsGrouping != null) && (_linkedEvents == null)) ? futures.length : null;
+      List<Event2Grouping>? linkedEventsGroupings = _event?.linkedEventsGroupingQuery;
+      int? linkedEventsIndex = ((linkedEventsGroupings != null) && (_linkedEvents == null)) ? futures.length : null;
       if (linkedEventsIndex != null) {
-        futures.add(Events2().loadEvents(Events2Query(grouping: linkedEventsGrouping, limit: _linkedEventsPageLength)));
+        futures.add(Events2().loadEvents(Events2Query(groupings: linkedEventsGroupings, limit: _linkedEventsPageLength)));
         //TMP: futures.add(Events2().loadEvents(Events2Query(searchText: 'Prairie')));
         setState(() {
           _linkedEventsLoading = true;
@@ -1366,10 +1381,10 @@ class _Event2DetailPanelState extends Event2Selector2State<Event2DetailPanel> im
             futures.add(Events2().loadEventPeople(eventId));
           }
 
-          Event2Grouping? linkedEventsGrouping = event.linkedEventsGroupingQuery;
-          int? linkedEventsIndex = (linkedEventsGrouping != null) ? futures.length : null;
+          List<Event2Grouping>? linkedEventsGroupings = event.linkedEventsGroupingQuery;
+          int? linkedEventsIndex = (linkedEventsGroupings != null) ? futures.length : null;
           if (linkedEventsIndex != null) {
-            futures.add(Events2().loadEvents(Events2Query(grouping: linkedEventsGrouping, limit: (_linkedEvents?.length ?? _linkedEventsPageLength))));
+            futures.add(Events2().loadEvents(Events2Query(groupings: linkedEventsGroupings, limit: (_linkedEvents?.length ?? _linkedEventsPageLength))));
           }
 
           int? superEventIndex = event.isSuperEventChild ? futures.length : null;
@@ -1453,12 +1468,12 @@ class _Event2DetailPanelState extends Event2Selector2State<Event2DetailPanel> im
   }
 
   Future<void> _extendLinkedEvents() async {
-    Event2Grouping? linkedEventsGrouping = _event?.linkedEventsGroupingQuery;
-    if ((linkedEventsGrouping != null) && !_linkedEventsLoading && !_extendingLinkedEvents) {
+    List<Event2Grouping>? linkedEventsGroupings = _event?.linkedEventsGroupingQuery;
+    if ((linkedEventsGroupings != null) && !_linkedEventsLoading && !_extendingLinkedEvents) {
       setStateIfMounted(() {
         _extendingLinkedEvents = true;
       });
-      Events2ListResult? linkedEventsListResult = await Events2().loadEvents(Events2Query(grouping: linkedEventsGrouping, offset: _linkedEvents?.length ?? 0, limit: _linkedEventsPageLength));
+      Events2ListResult? linkedEventsListResult = await Events2().loadEvents(Events2Query(groupings: linkedEventsGroupings, offset: _linkedEvents?.length ?? 0, limit: _linkedEventsPageLength));
       List<Event2>? events = linkedEventsListResult?.events;
       int? totalCount = linkedEventsListResult?.totalCount;
 

@@ -19,9 +19,11 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:illinois/ext/Group.dart';
 import 'package:illinois/model/Analytics.dart';
 import 'package:illinois/service/FlexUI.dart';
 import 'package:illinois/ui/attributes/ContentAttributesPanel.dart';
+import 'package:illinois/ui/profile/ProfileHomePanel.dart';
 import 'package:illinois/ui/widgets/RibbonButton.dart';
 import 'package:illinois/utils/AppUtils.dart';
 import 'package:rokwire_plugin/model/content_attributes.dart';
@@ -73,6 +75,9 @@ class _GroupsHomePanelState extends State<GroupsHomePanel> implements Notificati
   rokwire.GroupsContentType? _selectedContentType;
   bool _contentTypesVisible = false;
 
+  GestureRecognizer? _loginRecognizer;
+  GestureRecognizer? _selectAllRecognizer;
+
   List<Group>? _allGroups;
   List<Group>? _userGroups;
 
@@ -80,26 +85,29 @@ class _GroupsHomePanelState extends State<GroupsHomePanel> implements Notificati
 
   @override
   void initState() {
-    super.initState();
     NotificationService().subscribe(this, [
       Groups.notifyUserMembershipUpdated,
       Groups.notifyGroupCreated,
       Groups.notifyGroupUpdated,
       Groups.notifyGroupDeleted,
       Groups.notifyUserGroupsUpdated,
-      Auth2.notifyLoginSucceeded,
-      Auth2.notifyLogout,
+      Auth2.notifyLoginChanged,
       FlexUI.notifyChanged,
       Connectivity.notifyStatusChanged,
     ]);
+    _loginRecognizer = TapGestureRecognizer()..onTap = _onTapLogin;
+    _selectAllRecognizer = TapGestureRecognizer()..onTap = _onSelectAllGroups;
     _selectedContentType = widget.contentType;
     _reloadGroupsContent();
+    super.initState();
   }
 
   @override
   void dispose() {
-    super.dispose();
     NotificationService().unsubscribe(this);
+    _loginRecognizer?.dispose();
+    _selectAllRecognizer?.dispose();
+    super.dispose();
   }
 
   @override
@@ -157,7 +165,7 @@ class _GroupsHomePanelState extends State<GroupsHomePanel> implements Notificati
   }
 
   Future<List<Group>?> _loadUserGroups() async =>
-    Groups().loadGroups(contentType: rokwire.GroupsContentType.my);
+    Auth2().isLoggedIn ? Groups().loadGroups(contentType: rokwire.GroupsContentType.my) : null;
 
   Future<List<Group>?> _loadAllGroups() async =>
     Groups().loadGroups(
@@ -224,22 +232,26 @@ class _GroupsHomePanelState extends State<GroupsHomePanel> implements Notificati
     return
       Column(children: <Widget>[
         _buildGroupsContentSelection(),
-        Expanded(child: Stack(alignment: Alignment.topCenter, children: [
-          Column(children: [
-            _buildFunctionalBar(),
-            Expanded(child: _isLoading
-              ? Center(child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color?>(Styles().colors.fillColorPrimary), ),)
-              : Container(color: Styles().colors.background, child:
-                  RefreshIndicator(onRefresh: _onPullToRefresh, child:
-                    SingleChildScrollView(scrollDirection: Axis.vertical, physics: AlwaysScrollableScrollPhysics(), child:
-                      Column(children: <Widget>[ _buildGroupsContent(), ],),
+        Expanded(child:
+          Stack(alignment: Alignment.topCenter, children: [
+            _isLoading
+              ? Center(child: CircularProgressIndicator(strokeWidth: 2, color: Styles().colors.fillColorPrimary),)
+              : Column(children: [
+                  if ((_selectedContentType != rokwire.GroupsContentType.my) || Auth2().isLoggedIn)
+                    _buildFunctionalBar(),
+                  Expanded(child:
+                    Container(color: Styles().colors.background, child:
+                      RefreshIndicator(onRefresh: _onPullToRefresh, child:
+                        SingleChildScrollView(scrollDirection: Axis.vertical, physics: AlwaysScrollableScrollPhysics(), child:
+                          Column(children: <Widget>[ _buildGroupsContent(), ],),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-            )
-          ]),
-          _buildContentTypesContainer()
-        ]))
+                ]),
+            _buildContentTypesContainer()
+          ])
+        )
       ]);
   }
 
@@ -403,6 +415,16 @@ class _GroupsHomePanelState extends State<GroupsHomePanel> implements Notificati
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: <Widget>[
+        Visibility(
+          visible: _hasOptions,
+          child: IconButton(
+              padding:
+              EdgeInsets.only(left: defaultIconPadding, top: defaultIconPadding, bottom: defaultIconPadding),
+              constraints: BoxConstraints(),
+              style: ButtonStyle(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+              icon: Styles().images.getImage('more', excludeFromSemantics: true) ?? Container(),
+              onPressed: _onTapOptions),
+        ),
         Visibility(
           visible: _canCreateGroup,
           child: IconButton(
@@ -580,23 +602,29 @@ class _GroupsHomePanelState extends State<GroupsHomePanel> implements Notificati
 
   Widget _buildLoggedOutContent() {
     final String linkLoginMacro = "{{link.login}}";
-    String messageTemplate = Localization().getStringEx("panel.groups_home.label.my_groups.logged_out", "You are not logged in. To access your groups, you need to $linkLoginMacro first.");
+    String messageTemplate = Localization().getStringEx("panel.groups_home.label.my_groups.logged_out", "You are not logged in. To access your groups, $linkLoginMacro with your NetID and set your privacy level to 4 or 5 under Settings.");
     List<String> messages = messageTemplate.split(linkLoginMacro);
     List<InlineSpan> spanList = <InlineSpan>[];
     if (0 < messages.length)
       spanList.add(TextSpan(text: messages.first));
     for (int index = 1; index < messages.length; index++) {
-      spanList.add(TextSpan(text: Localization().getStringEx("panel.groups_home.label.my_groups.logged_out.link.login", "Login"), style : Styles().textStyles.getTextStyle("widget.link.button.title.regular"),
-        recognizer: TapGestureRecognizer()..onTap = _onTapLogin, ));
+      spanList.add(TextSpan(text: Localization().getStringEx("panel.groups_home.label.my_groups.logged_out.link.login", "sign in"), style : Styles().textStyles.getTextStyle("widget.link.button.title.regular"),
+        recognizer: _loginRecognizer, ));
       spanList.add(TextSpan(text: messages[index]));
     }
 
-    return Container(padding: EdgeInsets.symmetric(horizontal: 16, vertical: 30), child:
+    return Container(padding: EdgeInsets.symmetric(horizontal: 48, vertical: 32), child:
       RichText(textAlign: TextAlign.left, text:
         TextSpan(style: Styles().textStyles.getTextStyle("widget.message.dark.regular"), children: spanList)
       )
     );
   }
+
+  void _onTapLogin() {
+    Analytics().logSelect(target: "sign in");
+    ProfileHomePanel.present(context, content: ProfileContent.login,);
+  }
+
 
   Widget _buildEmptyMyGroupsContent() {
     return Container(padding: EdgeInsets.symmetric(horizontal: 16, vertical: 30), child:
@@ -604,7 +632,7 @@ class _GroupsHomePanelState extends State<GroupsHomePanel> implements Notificati
         TextSpan(style: Styles().textStyles.getTextStyle("widget.message.dark.regular"), children:[
           TextSpan(text:Localization().getStringEx("panel.groups_home.label.my_groups.empty", "You are not a member of any group. To join or create a group, see .")),
           TextSpan(text: Localization().getStringEx("panel.groups_home.label.my_groups.empty.link.all_groups", "All Groups"), style : Styles().textStyles.getTextStyle("widget.link.button.title.regular"),
-            recognizer: TapGestureRecognizer()..onTap = _onSelectAllGroups, ),
+            recognizer: _selectAllRecognizer, ),
           TextSpan(text:"."),
         ])
       )
@@ -668,6 +696,33 @@ class _GroupsHomePanelState extends State<GroupsHomePanel> implements Notificati
     Navigator.push(context, MaterialPageRoute(builder: (context)=>GroupCreatePanel()));
   }
 
+  void _onTapOptions(){
+    showModalBottomSheet(
+        context: context,
+        backgroundColor: Colors.white,
+        isScrollControlled: true,
+        isDismissible: true,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+        builder: (context) {
+          return Container(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 17),
+              child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+                Container(
+                  height: 24,
+                ),
+                Visibility(
+                    visible: _canSyncAuthmanGroups,
+                    child: RibbonButton(
+                        leftIconKey: "info",
+                        label: Localization().getStringEx("", "Sync Authman Groups"),//TBD localize
+                        onTap: () {
+                          _syncAuthmanGroups();
+                          Navigator.pop(context);
+                        })),
+              ]));
+        });
+  }
+
   Future<void> _onPullToRefresh() async {
     Analytics().logSelect(target: "Pull To Refresh");
     _reloadGroupsContent();
@@ -680,19 +735,24 @@ class _GroupsHomePanelState extends State<GroupsHomePanel> implements Notificati
     }
   }
 
-  void _onTapLogin() {
-    Analytics().logSelect(target: "Login");
-    if (!FlexUI().isAuthenticationAvailable) {
-      AppAlert.showAuthenticationNAMessage(context);
-    }
-    else {
-      Auth2().authenticateWithOidc();
-    }
+  void _syncAuthmanGroups() {
+    Analytics().logSelect(target: "Sync Authman Group");
+    Groups().syncAuthmanGroupsExt().then(
+          (result) => AppAlert.showDialogResult(context,
+              result.successful ?
+                  Localization().getStringEx("", "Successfully started groups authman sync.") : //TBD localize
+                  Localization().getStringEx("", "Failed to start groups authman sync. Reason: ${result.error}")
+          )
+    );
   }
   
   bool get _canCreateGroup {
     return Auth2().isOidcLoggedIn;
   }
+
+  bool get _hasOptions => _canSyncAuthmanGroups;
+
+  bool get _canSyncAuthmanGroups => Auth2().isManagedGroupAdmin; 
 
   ///////////////////////////////////
   // NotificationsListener
@@ -727,7 +787,7 @@ class _GroupsHomePanelState extends State<GroupsHomePanel> implements Notificati
     else if (name == Groups.notifyUserGroupsUpdated) {
       _applyUserGroups();
     }
-    else if ((name == Auth2.notifyLoginSucceeded) ||  (name == Auth2.notifyLogout)) {
+    else if (name == Auth2.notifyLoginChanged) {
       // Reload content with some delay, do not unmount immidately GroupsCard that could have updated the login state.
       Future.delayed(Duration(microseconds: 300), () {
         if (mounted) {

@@ -7,6 +7,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:illinois/service/Analytics.dart';
 import 'package:illinois/service/DeepLink.dart';
+import 'package:illinois/service/FlexUI.dart';
 import 'package:illinois/ui/attributes/ContentAttributesPanel.dart';
 import 'package:illinois/ui/messages/MessagesDirectoryPanel.dart';
 import 'package:illinois/ui/messages/MessagesHomePanel.dart';
@@ -23,6 +24,7 @@ import 'package:rokwire_plugin/service/auth2.directory.dart';
 import 'package:rokwire_plugin/service/content.dart';
 import 'package:rokwire_plugin/service/groups.dart';
 import 'package:rokwire_plugin/service/localization.dart';
+import 'package:rokwire_plugin/service/network.dart';
 import 'package:rokwire_plugin/service/social.dart';
 import 'package:rokwire_plugin/service/styles.dart';
 import 'package:rokwire_plugin/ui/widgets/triangle_painter.dart';
@@ -151,7 +153,7 @@ class _DirectoryAccountListCardState extends State<DirectoryAccountListCard> {
       _messageButton,
     ],);
 
-  Widget  get _messageButton => _iconButton(icon: _messageIcon, onTap: _onMessage, progress: _messageProgress);
+  Widget  get _messageButton => Visibility(visible: FlexUI().isMessagesAvailable, child: _iconButton(icon: _messageIcon, onTap: _onMessage, progress: _messageProgress));
   Widget? get _messageIcon => Styles().images.getImage('message', size: 20, color: Styles().colors.fillColorPrimary);
 
   void _onMessage() async {
@@ -262,17 +264,18 @@ class _DirectoryAccountListCardState extends State<DirectoryAccountListCard> {
 
 // DirectoryAccountBusinessCard
 
-class DirectoryAccountBusinessCard extends StatefulWidget {
+class DirectoryAccountContactCard extends StatefulWidget {
   final Auth2PublicAccount? account;
   final String? accountId;
+  final bool printMode;
 
-  DirectoryAccountBusinessCard({super.key, this.account, this.accountId });
+  DirectoryAccountContactCard({super.key, this.account, this.accountId, this.printMode = false });
 
   @override
-  State<StatefulWidget> createState() => _DirectoryAccountBusinessCardState();
+  State<StatefulWidget> createState() => _DirectoryAccountContactCardState();
 }
 
-class _DirectoryAccountBusinessCardState extends State<DirectoryAccountBusinessCard> {
+class _DirectoryAccountContactCardState extends State<DirectoryAccountContactCard> {
 
   Auth2PublicAccount? _account;
   bool _loadingAccount = false;
@@ -280,9 +283,10 @@ class _DirectoryAccountBusinessCardState extends State<DirectoryAccountBusinessC
   Auth2UserProfile? get _profile => _account?.profile;
 
   String? get _photoImageUrl => StringUtils.isNotEmpty(_profile?.photoUrl) ?
-    Content().getUserPhotoUrl(accountId: _account?.id, type: UserProfileImageType.medium) : null;
+    Content().getUserPhotoUrl(accountId: _account?.id, type: _photoImageType) : null;
 
   double get _photoImageSize => MediaQuery.of(context).size.width / 3;
+  UserProfileImageType get _photoImageType => widget.printMode ? UserProfileImageType.defaultType : UserProfileImageType.medium;
 
   Map<String, String>? get _photoAuthHeaders => DirectoryProfilePhotoUtils.authHeaders;
 
@@ -314,7 +318,9 @@ class _DirectoryAccountBusinessCardState extends State<DirectoryAccountBusinessC
 
   Decoration get _cardDecoration => BoxDecoration(
     color: Styles().colors.white,
+    border: Border.all(color: Styles().colors.surfaceAccent, width: 1),
     borderRadius: _cardBorderRadiusGeometry,
+    boxShadow: [BoxShadow(color: Styles().colors.blackTransparent018, spreadRadius: 1.0, blurRadius: 3.0, offset: Offset(1, 1))]
   );
 
   BorderRadiusGeometry get _cardBorderRadiusGeometry =>
@@ -360,40 +366,31 @@ class _DirectoryAccountBusinessCardState extends State<DirectoryAccountBusinessC
         photoUrlHeaders: _photoAuthHeaders,
         imageSize: _photoImageSize,
       ),
-      Row(children: [
-        Expanded(child:
-          Center(child:
-            Row(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-              if (_profile?.pronunciationUrl?.isNotEmpty == true)
-                DirectoryPronunciationButton.spacer(),
-              Column(mainAxisSize: MainAxisSize.min, children: [
-                Padding(padding: EdgeInsets.only(top: 16), child:
-                  Text(_profile?.fullName ?? '', style: _profileNameTextStyle, textAlign: TextAlign.center,),
-                ),
-                if (_profile?.pronouns?.isNotEmpty == true)
-                  Text(_profile?.pronouns ?? '', style: Styles().textStyles.getTextStyle('widget.detail.small'), textAlign: TextAlign.center,),
-              ]),
-              if (_profile?.pronunciationUrl?.isNotEmpty == true)
-                DirectoryPronunciationButton(url: _profile?.pronunciationUrl),
-            ],),
-          ),
-        ),
-      ],),
-    ]);
 
-  Widget get _profileTextHeading => Column(mainAxisSize: MainAxisSize.min, children: [
-    Row(mainAxisSize: MainAxisSize.max, crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Padding(padding: EdgeInsets.only(top: 12), child:
+        RichText(textAlign: TextAlign.center, text: TextSpan(style: _profileNameTextStyle, children: [
+          TextSpan(text: _profile?.fullName ?? ''),
+        ])),
+      ),
+
+      if (_profile?.pronouns?.isNotEmpty == true)
+        Text(_profile?.pronouns ?? '', style: Styles().textStyles.getTextStyle('widget.detail.small'), textAlign: TextAlign.center,),
+    ],);
+
+  Widget get _profileTextHeading =>
+    Align(alignment: Alignment.centerLeft, child:
       Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Padding(padding: EdgeInsets.only(top: 16), child:
-          Text(_profile?.fullName ?? '', style: _profileNameTextStyle, textAlign: TextAlign.center,),
+
+        Padding(padding: EdgeInsets.only(top: 12), child:
+          RichText(textAlign: TextAlign.left, text: TextSpan(style: _profileNameTextStyle, children: [
+            TextSpan(text: _profile?.fullName ?? ''),
+          ])),
         ),
+
         if (_profile?.pronouns?.isNotEmpty == true)
-          Text(_profile?.pronouns ?? '', style: Styles().textStyles.getTextStyle('widget.detail.small'), textAlign: TextAlign.center,),
+          Text(_profile?.pronouns ?? '', style: Styles().textStyles.getTextStyle('widget.detail.small'), textAlign: TextAlign.left,),
       ]),
-      if (_profile?.pronunciationUrl?.isNotEmpty == true)
-        DirectoryPronunciationButton(url: _profile?.pronunciationUrl),
-    ],),
-  ]);
+    );
 
   Widget get _profileTrailing =>
     Column(mainAxisSize: MainAxisSize.min, children: [
@@ -443,7 +440,7 @@ class DirectoryAccountPopupCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Stack(children: [
-    DirectoryAccountBusinessCard(account: account, accountId: accountId,),
+    DirectoryAccountContactCard(account: account, accountId: accountId,),
     Positioned.fill(child:
       Align(alignment: Alignment.topRight, child:
         InkWell(onTap: () => _onTapClose(context), child:
@@ -468,36 +465,32 @@ class DirectoryProfileDetails extends StatelessWidget {
 
   DirectoryProfileDetails(this.profile, { super.key });
   
-  String? get college => null;
-  String? get department => null;
-  String? get major => null;
-  
-  String? get email => null;
-  String? get email2 => null;
-  String? get phone => null;
-  String? get website => null;
-  
   @override
   Widget build(BuildContext context) =>
       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        if (profile?.title?.isNotEmpty == true)
+          _textDetail(profile?.title ?? ''),
         if (profile?.college?.isNotEmpty == true)
-          Text(profile?.college ?? '', style: Styles().textStyles.getTextStyle('widget.detail.small'),),
+          _textDetail(profile?.college ?? ''),
         if (profile?.department?.isNotEmpty == true)
-          Text(profile?.department ?? '', style: Styles().textStyles.getTextStyle('widget.detail.small'),),
+          _textDetail(profile?.department ?? ''),
         if (profile?.major?.isNotEmpty == true)
-          Text(profile?.major ?? '', style: Styles().textStyles.getTextStyle('widget.detail.small'),),
+          _textDetail(profile?.major ?? ''),
         if (profile?.email?.isNotEmpty == true)
-          _linkDetail(profile?.email ?? '', 'mailto:${email}'),
+          _linkDetail(profile?.email ?? '', 'mailto:${profile?.email}', analyticsTarget: Analytics.LogAnonymousEmail),
         if (profile?.email2?.isNotEmpty == true)
-          _linkDetail(profile?.email2 ?? '', 'mailto:${email2}'),
+          _linkDetail(profile?.email2 ?? '', 'mailto:${profile?.email2}', analyticsTarget: Analytics.LogAnonymousEmail),
         if (profile?.phone?.isNotEmpty == true)
-          _linkDetail(profile?.phone ?? '', 'tel:${phone}'),
+          _linkDetail(profile?.phone ?? '', 'tel:${profile?.phone}', analyticsTarget: Analytics.LogAnonymousPhone),
         if (profile?.website?.isNotEmpty == true)
-          _linkDetail(profile?.website ?? '', UrlUtils.fixUrl(profile?.website ?? '', scheme: 'https') ?? profile?.website ?? ''),
+          _linkDetail(profile?.website ?? '', UrlUtils.fixUrl(profile?.website ?? '', scheme: 'https') ?? profile?.website ?? '', analyticsTarget: Analytics.LogAnonymousWebsite),
       ],);
 
-  Widget _linkDetail(String text, String url) =>
-    InkWell(onTap: () => _onTapLink(url, analyticsTarget: text), child:
+  Widget _textDetail(String text) =>
+    Text(text, style: Styles().textStyles.getTextStyle('widget.detail.small'),);
+
+  Widget _linkDetail(String text, String url, { String? analyticsTarget } ) =>
+    InkWell(onTap: () => _onTapLink(url, analyticsTarget: analyticsTarget ?? text), child:
       Text(text, style: Styles().textStyles.getTextStyleEx('widget.button.title.small.underline', decorationColor: Styles().colors.fillColorPrimary),),
     );
 
@@ -523,7 +516,7 @@ void _launchUrl(String? url) {
 
 // DirectoryProfilePhoto
 
-class DirectoryProfilePhoto extends StatelessWidget {
+class DirectoryProfilePhoto extends StatefulWidget {
 
   final String? photoUrl;
   final Map<String, String>? photoUrlHeaders;
@@ -534,11 +527,41 @@ class DirectoryProfilePhoto extends StatelessWidget {
   DirectoryProfilePhoto({ super.key, this.photoUrl, this.photoUrlHeaders, this.photoData, this.borderSize = 0, required this.imageSize });
 
   @override
+  State<DirectoryProfilePhoto> createState() => _DirectoryProfilePhotoState();
+}
+
+class _DirectoryProfilePhotoState extends State<DirectoryProfilePhoto> {
+  Uint8List? _photoBytes;
+
+  @override
+  void initState() {
+    super.initState();
+    _photoBytes = widget.photoData;
+    _loadNetworkPhoto();
+  }
+
+  void _loadNetworkPhoto() {
+    String? photoUrl = widget.photoUrl;
+    if ((_photoBytes == null) && StringUtils.isNotEmpty(photoUrl)) {
+      Network().get(photoUrl, headers: widget.photoUrlHeaders).then((response) {
+        int? responseCode = response?.statusCode;
+        if ((responseCode != null) && (responseCode >= 200) && (responseCode <= 301)) {
+          setStateIfMounted(() {
+            _photoBytes = response?.bodyBytes;
+          });
+        } else {
+          debugPrint('${responseCode}: Failed to load photo with url: ${widget.photoUrl}');
+        }
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     ImageProvider<Object>? decorationImage = _decorationImage;
     return (decorationImage != null) ?
       Container(
-        width: imageSize + borderSize, height: imageSize + borderSize,
+        width: widget.imageSize + widget.borderSize, height: widget.imageSize + widget.borderSize,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: Styles().colors.white,
@@ -546,31 +569,28 @@ class DirectoryProfilePhoto extends StatelessWidget {
         ),
         child: Center(
           child: Container(
-            width: imageSize, height: imageSize,
+            width: widget.imageSize, height: widget.imageSize,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: Styles().colors.background,
               image: DecorationImage(
-                fit: BoxFit.cover,
-                image: decorationImage
+                  fit: BoxFit.cover,
+                  image: decorationImage
               ),
-            )
+            ),
           )
         ),
-      ) : (Styles().images.getImage('profile-placeholder', excludeFromSemantics: true, size: imageSize + borderSize) ?? Container());
+      ) : (Styles().images.getImage('profile-placeholder', excludeFromSemantics: true, size: widget.imageSize + widget.borderSize) ?? Container());
   }
 
-    ImageProvider<Object>? get _decorationImage {
-      if (photoData != null) {
-        return Image.memory(photoData ?? Uint8List(0)).image;
-      }
-      else if (photoUrl != null) {
-        return NetworkImage(photoUrl ?? '', headers: photoUrlHeaders);
-      }
-      else {
-        return null;
-      }
-    } 
+  ImageProvider<Object>? get _decorationImage {
+    if (_photoBytes != null) {
+      return Image.memory(_photoBytes ?? Uint8List(0)).image;
+    }
+    else {
+      return null;
+    }
+  }
 }
 
 // DirectoryProfilePhotoUtils
@@ -599,13 +619,16 @@ class DirectoryProfilePhotoUtils {
 class DirectoryPronunciationButton extends StatefulWidget {
   final String? url;
   final Uint8List? data;
+  final EdgeInsetsGeometry padding;
 
-  DirectoryPronunciationButton({super.key, this.url, this.data});
+  DirectoryPronunciationButton({
+    super.key, this.url, this.data,
+    this.padding = const EdgeInsets.symmetric(horizontal: 13, vertical: 18)
+  });
 
   @override
   State<StatefulWidget> createState() => _DirectoryPronunciationButtonState();
 
-  static Widget spacer() => _DirectoryPronunciationButtonState._pronunciationButtonStaticContent();
 }
 
 class _DirectoryPronunciationButtonState extends State<DirectoryPronunciationButton> {
@@ -634,17 +657,14 @@ class _DirectoryPronunciationButtonState extends State<DirectoryPronunciationBut
       _initializingAudioPlayer ? _pronunciationButtonInitializingContent : _pronunciationButtonPlaybackContent;
 
     Widget get _pronunciationButtonInitializingContent =>
-      _pronunciationButtonStaticContent(child: DirectoryProgressWidget());
-
-    static Widget _pronunciationButtonStaticContent({Widget? child}) =>
-        Padding(padding: EdgeInsets.symmetric(horizontal: 13, vertical: 18), child:
-          SizedBox(width: _pronunciationButtonIconSize, height: _pronunciationButtonIconSize, child:
-            child
-          ),
-        );
+      Padding(padding: widget.padding, child:
+        SizedBox(width: _pronunciationButtonIconSize, height: _pronunciationButtonIconSize, child:
+          DirectoryProgressWidget()
+        ),
+      );
 
     Widget get _pronunciationButtonPlaybackContent =>
-      Padding(padding: EdgeInsets.symmetric(horizontal: _pronunciationPlaying ? 11 : 12, vertical: 18), child:
+      Padding(padding: widget.padding.add(EdgeInsets.symmetric(horizontal: _pronunciationPlaying ? -2 : -1)) , child:
         Styles().images.getImage(_pronunciationPlaying ? 'volume-high' : 'volume', size: _pronunciationButtonIconSize),
       );
 

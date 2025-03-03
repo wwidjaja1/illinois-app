@@ -198,6 +198,10 @@ class Storage extends rokwire.Storage {
   AssistantLocation? get debugAssistantLocation => AssistantLocation.fromJson(JsonUtils.decodeMap(getStringWithName(debugAssistantLocationKey)));
   set debugAssistantLocation(AssistantLocation? location) => setStringWithName(debugAssistantLocationKey, JsonUtils.encode(location?.toJson()));
 
+  static const String debugMessagesDisabledKey  = 'debugMessagesDisabled';
+  bool? get debugMessagesDisabled => getBoolWithName(debugMessagesDisabledKey);
+  set debugMessagesDisabled(bool? value) => setBoolWithName(debugMessagesDisabledKey, value);
+
   // Firebase
 // static const String firebaseMessagingSubscriptionTopisKey  = 'firebase_subscription_topis';
 // Replacing "firebase_subscription_topis" with "firebase_messaging_subscription_topis" key ensures that
@@ -345,9 +349,6 @@ class Storage extends rokwire.Storage {
   set homeToutImageTime(int? value) => setIntWithName(homeToutImageTimeKey, value);
 
   // Home
-  String get homeWelcomeVideoVisibleKey => 'edu.illinois.rokwire.home.welcome_video.visible';
-  bool? get homeWelcomeVideoVisible => getBoolWithName(homeWelcomeVideoVisibleKey);
-  set homeWelcomeVideoVisible(bool? value) => setBoolWithName(homeWelcomeVideoVisibleKey, value);
 
   String get homeWelcomeMessageVisibleKey => 'edu.illinois.rokwire.home.welcome_message.visible';
   bool? get homeWelcomeMessageVisible => getBoolWithName(homeWelcomeMessageVisibleKey);

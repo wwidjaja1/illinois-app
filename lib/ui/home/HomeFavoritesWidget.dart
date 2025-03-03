@@ -28,6 +28,7 @@ import 'package:illinois/service/Sports.dart';
 import 'package:illinois/service/Storage.dart';
 import 'package:illinois/ui/SavedPanel.dart';
 import 'package:illinois/ui/athletics/AthleticsContentPanel.dart';
+import 'package:illinois/ui/dining/DiningCard.dart';
 import 'package:illinois/ui/home/HomePanel.dart';
 import 'package:illinois/ui/home/HomeWidgets.dart';
 import 'package:illinois/ui/mtd/MTDStopsHomePanel.dart';
@@ -87,7 +88,7 @@ class HomeFavoritesWidget extends StatefulWidget {
       case News.favoriteKeyName: message = Localization().getStringEx("widget.home.favorites.message.empty.news", "Tap the \u2606 on items in <a href='$localUrlMacro'><b>Big 10 News</b></a> for quick access here."); break;
       case LaundryRoom.favoriteKeyName: message = Localization().getStringEx("widget.home.favorites.message.empty.laundry", "Tap the \u2606 on items in <a href='$localUrlMacro'><b>Laundry Locations</b></a> for quick access here."); break;
       case MTDStop.favoriteKeyName: message = Localization().getStringEx("widget.home.favorites.message.empty.mtd_stops", "Tap the \u2606 on items in <a href='$localUrlMacro'><b>Bus Stops</b></a> for quick access here."); break;
-      case ExplorePOI.favoriteKeyName: message = Localization().getStringEx("widget.home.favorites.message.empty.locations", "Tap the \u2606 on items in <a href='$localUrlMacro'><b>My Locations</b></a> for quick access here."); break;
+      case ExplorePOI.favoriteKeyName: message = Localization().getStringEx("widget.home.favorites.message.empty.locations", "Tap the \u2606 on locations on the <a href='$localUrlMacro'><b>Map</b></a> for quick access here."); break;
       case GuideFavorite.favoriteKeyName: message = Localization().getStringEx("widget.home.favorites.message.empty.campus_guide", "Tap the \u2606 on items in <a href='$localUrlMacro'><b>Campus Guide</b></a> for quick access here."); break;
       case Appointment.favoriteKeyName:
         message = (Storage().appointmentsCanDisplay != true) ?
@@ -280,6 +281,12 @@ class _HomeFavoritesWidgetState extends State<HomeFavoritesWidget> implements No
     else if (item is Appointment) {
       return AppointmentCard(
         appointment: item,
+      );
+    }
+    else if (item is Dining) {
+      return DiningCard(
+          item,
+          onTap: (_) =>_onTapItem(item),
       );
     }
 
@@ -593,7 +600,7 @@ class _HomeFavoritesWidgetState extends State<HomeFavoritesWidget> implements No
     Analytics().logSelect(target: 'View All', source: '${widget.runtimeType.toString()}(${widget.favoriteKey})');
     //FavoriteExt.launchHome(context, key: widget.favoriteKey);
     if (widget.favoriteKey == MTDStop.favoriteKeyName) {
-      Navigator.push(context, CupertinoPageRoute(builder: (context) => MTDStopsHomePanel(contentType: MTDStopsContentType.my)));
+      Navigator.push(context, CupertinoPageRoute(builder: (context) => MTDStopsHomePanel(scope: MTDStopsScope.my)));
     } else if(widget.favoriteKey == Game.favoriteKeyName) {
       Navigator.push(context, CupertinoPageRoute(builder: (context) => AthleticsContentPanel(content: AthleticsContent.my_events)));
     } else if(widget.favoriteKey == News.favoriteKeyName) {

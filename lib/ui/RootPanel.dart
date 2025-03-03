@@ -150,7 +150,6 @@ class _RootPanelState extends State<RootPanel> with TickerProviderStateMixin imp
       FirebaseMessaging.notifyMapMtdStopsNotification,
       FirebaseMessaging.notifyMapMyLocationsNotification,
       FirebaseMessaging.notifyMapMentalHealthNotification,
-      FirebaseMessaging.notifyMapStateFarmWayfindingNotification,
       FirebaseMessaging.notifyAcademicsNotification,
       FirebaseMessaging.notifyAcademicsAppointmentsNotification,
       FirebaseMessaging.notifyAcademicsCanvasCoursesNotification,
@@ -169,14 +168,11 @@ class _RootPanelState extends State<RootPanel> with TickerProviderStateMixin imp
       FirebaseMessaging.notifyWellnessDailyTipsNotification,
       FirebaseMessaging.notifyWellnessHealthScreenerNotification,
       FirebaseMessaging.notifyWellnessMentalHealthNotification,
-      FirebaseMessaging.notifyWellnessPodcastNotification,
       FirebaseMessaging.notifyWellnessResourcesNotification,
       FirebaseMessaging.notifyWellnessRingsNotification,
-      FirebaseMessaging.notifyWellnessStrugglingNotification,
       FirebaseMessaging.notifyWellnessTodoListNotification,
       FirebaseMessaging.notifyWalletNotification,
       FirebaseMessaging.notifyWalletIlliniIdNotification,
-      FirebaseMessaging.notifyWalletIlliniIdFaqsNotification,
       FirebaseMessaging.notifyWalletBusPassNotification,
       FirebaseMessaging.notifyWalletMealPlanNotification,
       FirebaseMessaging.notifyWalletAddIlliniCashNotification,
@@ -426,9 +422,6 @@ class _RootPanelState extends State<RootPanel> with TickerProviderStateMixin imp
     else if (name == FirebaseMessaging.notifyMapStoriedSitesNotification) {
       _onFirebaseMapNotification(ExploreMapType.StoriedSites);
     }
-    else if (name == FirebaseMessaging.notifyMapStateFarmWayfindingNotification) {
-      _onFirebaseMapNotification(ExploreMapType.StateFarmWayfinding);
-    }
     else if (name == FirebaseMessaging.notifyAcademicsNotification) {
       _onFirebaseTabNotification(RootTab.Academics);
     }
@@ -483,17 +476,11 @@ class _RootPanelState extends State<RootPanel> with TickerProviderStateMixin imp
     else if (name == FirebaseMessaging.notifyWellnessMentalHealthNotification) {
       _onFirebaseWellnessNotification(WellnessContent.mentalHealth);
     }
-    else if (name == FirebaseMessaging.notifyWellnessPodcastNotification) {
-      _onFirebaseWellnessNotification(WellnessContent.podcast);
-    }
     else if (name == FirebaseMessaging.notifyWellnessResourcesNotification) {
       _onFirebaseWellnessNotification(WellnessContent.resources);
     }
     else if (name == FirebaseMessaging.notifyWellnessRingsNotification) {
       _onFirebaseWellnessNotification(WellnessContent.rings);
-    }
-    else if (name == FirebaseMessaging.notifyWellnessStrugglingNotification) {
-      _onFirebaseWellnessNotification(WellnessContent.struggling);
     }
     else if (name == FirebaseMessaging.notifyWellnessTodoListNotification) {
       _onFirebaseWellnessNotification(WellnessContent.todo);
@@ -504,9 +491,6 @@ class _RootPanelState extends State<RootPanel> with TickerProviderStateMixin imp
     }
     else if (name == FirebaseMessaging.notifyWalletIlliniIdNotification) {
       _onFirebaseWaletNotification(WalletContentType.illiniId);
-    }
-    else if (name == FirebaseMessaging.notifyWalletIlliniIdFaqsNotification) {
-      _onFirebaseWaletNotification(WalletContentType.illiniIdFaqs);
     }
     else if (name == FirebaseMessaging.notifyWalletBusPassNotification) {
       _onFirebaseWaletNotification(WalletContentType.busPass);
@@ -872,7 +856,8 @@ class _RootPanelState extends State<RootPanel> with TickerProviderStateMixin imp
     if ((content != null)) {
       _presentSocialMessagePanel(
         conversationId: JsonUtils.stringValue(content['conversation_id']) ?? JsonUtils.stringValue(content['entity_id']),
-        messageId: JsonUtils.stringValue(content['message_id'])
+        messageId: JsonUtils.stringValue(content['message_id']),
+        messageGlobalId: JsonUtils.stringValue(content['message_global_id']),
       );
     }
   }
@@ -1137,13 +1122,18 @@ class _RootPanelState extends State<RootPanel> with TickerProviderStateMixin imp
       _presentSocialMessagePanel(
         conversationId: JsonUtils.stringValue(param["entity_id"]),
         messageId: JsonUtils.stringValue(param["message_id"]),
+        messageGlobalId: JsonUtils.stringValue(param["message_global_id"]),
       );
     }
   }
 
-  void _presentSocialMessagePanel({String? conversationId, String? messageId}) {
+  void _presentSocialMessagePanel({String? conversationId, String? messageId, String? messageGlobalId}) {
     if (StringUtils.isNotEmpty(conversationId)) {
-      Navigator.push(context, CupertinoPageRoute(builder: (context) => MessagesConversationPanel(conversationId: conversationId, targetMessageId: messageId,)));;
+      Navigator.push(context, CupertinoPageRoute(builder: (context) => MessagesConversationPanel(
+        conversationId: conversationId,
+        targetMessageId: messageId,
+        targetMessageGlobalId: messageGlobalId,
+      )));
     } else {
       AppAlert.showDialogResult(context, Localization().getStringEx("", "Failed to load conversation data."));
     }
@@ -1226,7 +1216,7 @@ class _RootPanelState extends State<RootPanel> with TickerProviderStateMixin imp
       Navigator.of(context, rootNavigator: true).popUntil((route) => route.isFirst);
       if (mapsIndex != _currentTabIndex) {
         _selectTab(mapsIndex);
-        if ((param is ExploreMapType) && !ExploreMapPanel.hasState) {
+        if ((param != null) && !ExploreMapPanel.hasState) {
           Widget? mapsWidget = _panels[RootTab.Maps];
           ExploreMapPanel? mapsPanel = (mapsWidget is ExploreMapPanel) ? mapsWidget : null;
           mapsPanel?.params[ExploreMapPanel.selectParamKey] = param;

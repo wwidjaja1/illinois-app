@@ -6,6 +6,7 @@ import 'package:illinois/model/sport/Game.dart';
 import 'package:illinois/service/Analytics.dart';
 import 'package:illinois/service/Auth2.dart';
 import 'package:illinois/service/Content.dart';
+import 'package:illinois/ui/events2/Even2SetupSuperEvent.dart';
 import 'package:intl/intl.dart';
 import 'package:rokwire_plugin/model/event2.dart';
 import 'package:rokwire_plugin/model/explore.dart';
@@ -308,12 +309,12 @@ extension Event2Ext on Event2 {
   Game? get game =>
     isSportEvent ? Game.fromJson(data) : null;
 
-  Event2Grouping? get linkedEventsGroupingQuery {
+  List<Event2Grouping>? get linkedEventsGroupingQuery {
     if (isSuperEvent) {
-      return Event2Grouping.superEvent(id);
+      return Event2Grouping.superEvents(superEventId: id);
     }
     else if (isRecurring) {
-      return Event2Grouping.recurrence(grouping?.recurrenceId);
+      return Event2Grouping.recurringEvents(groupId: grouping?.recurrenceId, individual: false);
     }
     else {
       return null;
@@ -396,6 +397,51 @@ extension Event2Ext on Event2 {
       data: this.data,
     );
   }
+
+  Event2 toRecurringEvent({required DateTime startDateTimeUtc, required DateTime endDateTimeUtc}) => Event2(
+    name: this.name,
+    description: this.description,
+    instructions: this.instructions,
+    imageUrl: this.imageUrl,
+    eventUrl: this.eventUrl,
+
+    timezone: this.timezone,
+    startTimeUtc: startDateTimeUtc,
+    endTimeUtc: endDateTimeUtc,
+    allDay: this.allDay,
+
+    eventType: this.eventType,
+    location: this.location,
+    onlineDetails: this.onlineDetails,
+
+    grouping: Event2Grouping.recurrence(this.grouping?.recurrenceId, individual: false), // set "sub-events" not to show as individuals
+    attributes: this.attributes,
+    authorizationContext: this.authorizationContext,
+    context: this.context,
+
+    canceled: this.canceled,
+    published: this.published,
+    userRole: this.userRole,
+
+    free: this.free,
+    cost: this.cost,
+
+    registrationDetails: this.registrationDetails,
+    attendanceDetails: this.attendanceDetails,
+    surveyDetails: this.surveyDetails,
+    notificationSettings: this.notificationSettings,
+
+    sponsor: this.sponsor,
+    speaker: this.speaker,
+    contacts: this.contacts,
+
+    source: this.source,
+    data: this.data,
+
+  );
+
+  Future<List<Event2PersonIdentifier>?> get asyncAdminIdentifiers async =>
+      Events2().loadAdminIdentifiers(this);
 }
 
 extension Event2GroupingExt on Event2Grouping{
@@ -501,6 +547,7 @@ String? event2TypeFilterToDisplayString(Event2TypeFilter? value) {
 
 String? event2TimeFilterToDisplayString(Event2TimeFilter? value) {
   switch (value) {
+    case Event2TimeFilter.past: return Localization().getStringEx("model.event2.event_time.past", "Past");
     case Event2TimeFilter.upcoming: return Localization().getStringEx("model.event2.event_time.upcoming", "Upcoming");
     case Event2TimeFilter.today: return Localization().getStringEx("model.event2.event_time.today", "Today");
     case Event2TimeFilter.tomorrow: return Localization().getStringEx("model.event2.event_time.tomorrow", "Tomorrow");
@@ -609,4 +656,75 @@ String? event2UserRegistrationToDisplayString(Event2UserRegistrationType? value)
     case Event2UserRegistrationType.creator: return Localization().getStringEx("model.event2.registrant_type.creator", "Creator");
     default: return null;
   }
+}
+
+extension Event2PersonIdentifierExt on Event2PersonIdentifier{
+  static List<Event2PersonIdentifier>? constructAdminIdentifiersFromIds(List<String>? ids) =>
+      CollectionUtils.isEmpty(ids) ? null :
+        ids!.map((_id) => Event2PersonIdentifier(externalId: _id)
+      ).toList();
+
+  static List<String>? extractNetIds(List<Event2PersonIdentifier>? identifiers) =>
+      identifiers?.fold<List<String>?>([],
+              (ids,identifier) =>  ListUtils.append(ids, identifier.netId));
+
+  static String? extractNetIdsString(List<Event2PersonIdentifier>? identifiers) =>
+      extractNetIds(identifiers)?.join(", ");
+}
+
+extension Event2PersonsResultExt on Event2PersonsResult{
+  List<Event2PersonIdentifier>? get adminIdentifiers =>
+    registrants?.fold<List<Event2PersonIdentifier>?>([], (_admins, person) =>
+      (person.role == Event2UserRole.admin) ?
+          ListUtils.append(_admins, person.identifier) :
+          _admins
+      );
+}
+
+extension Events2Ext on Events2 {
+    Future<List<Event2PersonIdentifier>?> loadAdminIdentifiers(Event2? event) async =>
+      event?.id == null ? null :
+        (await Events2().loadEventPeople(event!.id!))?.adminIdentifiers;
+
+  Future<Event2Result> duplicateEvent(Event2? event, /*{List<Event2PersonIdentifier>? admins}*/) async {
+    List<Event2PersonIdentifier>? _admins = await loadAdminIdentifiers(event);
+    _admins?.removeWhere((identifier) =>  identifier.externalId == Auth2().netId); //exclude self otherwise the BB duplicates it
+    return Events2().createEvent(event!.duplicate, adminIdentifiers: _admins).then((createdEvent) async {
+      if (createdEvent is Event2) {
+
+        if(event.isSuperEvent == false){
+          return Event2Result.success(); //success
+        }
+
+        Events2ListResult? subEventsLoad = await Events2().loadEvents(Events2Query(groupings: event.linkedEventsGroupingQuery));
+        if(CollectionUtils.isEmpty(subEventsLoad?.events)){
+          return Event2Result.fail("Unable to load sub events");
+        }
+        //Duplicate sub events
+        Event2SuperEventResult<int> updateResult = await  Event2SuperEventsController.multiUpload(
+            events: Event2SuperEventsController.applyCollectionChange(
+                collection: subEventsLoad?.events,
+                change: (subEvent) {
+                  Event2Grouping subGrouping = subEvent.grouping?.copyWith(superEventId:  createdEvent.id) ?? Event2Grouping.superEvent(createdEvent.id);
+                  return subEvent.duplicateWith(grouping: subGrouping);}),
+            uploadAPI: (event) => Events2().createEvent(event, adminIdentifiers: _admins));
+
+        return updateResult.successful ? Event2Result.success(data: updateResult.data) : Event2Result.fail(updateResult.error);
+      }
+
+      return Event2Result.fail("Unable to duplicate main event");
+    });
+  }
+}
+
+class Event2Result<T>{
+  String? error;
+  T? data;
+
+  Event2Result({String? this.error, this.data});
+
+  static Event2Result<T> fail<T>(String? error) => Event2Result(error: error ?? "error");
+  static Event2Result<T> success<T>({T? data}) => Event2Result(data: data);
+
+  bool get successful => this.error == null;
 }

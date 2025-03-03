@@ -4,12 +4,12 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:illinois/service/Analytics.dart';
 import 'package:illinois/ui/profile/ProfileInfoPage.dart';
-import 'package:illinois/ui/profile/ProfileInfoAndDirectoryPage.dart';
 import 'package:illinois/ui/directory/DirectoryWidgets.dart';
+import 'package:illinois/ui/profile/ProfileInfoSharePanel.dart';
 import 'package:illinois/ui/widgets/LinkButton.dart';
-import 'package:illinois/utils/AppUtils.dart';
 import 'package:rokwire_plugin/model/auth2.dart';
 import 'package:rokwire_plugin/service/content.dart';
+import 'package:rokwire_plugin/service/localization.dart';
 import 'package:rokwire_plugin/service/styles.dart';
 import 'package:rokwire_plugin/utils/utils.dart';
 
@@ -17,16 +17,21 @@ class ProfileInfoPreviewPage extends StatefulWidget {
   final ProfileInfo contentType;
   final Auth2UserProfile? profile;
   final Auth2UserPrivacy? privacy;
+  final bool onboarding;
   final Uint8List? pronunciationAudioData;
   final Uint8List? photoImageData;
   final String? photoImageToken;
-  ProfileInfoPreviewPage({super.key, required this.contentType, this.profile, this.privacy, this.photoImageData, this.photoImageToken, this.pronunciationAudioData });
+
+  ProfileInfoPreviewPage({super.key, required this.contentType,
+    this.profile, this.privacy, this.onboarding = false,
+    this.photoImageData, this.photoImageToken, this.pronunciationAudioData
+  });
 
   @override
-  State<StatefulWidget> createState() => _ProfileInfoPreviewPageState();
+  State<StatefulWidget> createState() => ProfileInfoPreviewPageState();
 }
 
-class _ProfileInfoPreviewPageState extends ProfileDirectoryMyInfoBasePageState<ProfileInfoPreviewPage> {
+class ProfileInfoPreviewPageState extends ProfileDirectoryMyInfoBasePageState<ProfileInfoPreviewPage> {
 
   Auth2UserProfile? _profile;
 
@@ -87,34 +92,36 @@ class _ProfileInfoPreviewPageState extends ProfileDirectoryMyInfoBasePageState<P
         Padding(padding: EdgeInsets.only(top: 12, bottom: 12), child:
           DirectoryProfileDetails(_profile)
         ),
-        //_shareButton,
+        if ((widget.onboarding == false) && (_profile?.isNotEmpty == true))
+          _shareButton,
     ],)
   );
 
-  Widget get _cardContentHeading => Center(child:
-    Row(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-      if (_profile?.pronunciationUrl?.isNotEmpty == true)
-        DirectoryPronunciationButton.spacer(),
-      Column(mainAxisSize: MainAxisSize.min, children: [
-        Padding(padding: EdgeInsets.only(top: 16), child:
-          Text(_profile?.fullName ?? '', style: nameTextStyle, textAlign: TextAlign.center,),
-        ),
-        if (_profile?.pronouns?.isNotEmpty == true)
-          Text(_profile?.pronouns ?? '', style: Styles().textStyles.getTextStyle('widget.detail.small'), textAlign: TextAlign.center,),
-      ]),
-      if (_profile?.pronunciationUrl?.isNotEmpty == true)
-        DirectoryPronunciationButton(url: _profile?.pronunciationUrl, data: widget.pronunciationAudioData,),
-    ],),
-  );
+  Widget get _cardContentHeading => Column(children: [
+    Padding(padding: EdgeInsets.only(top: (_profile?.pronunciationUrl?.isNotEmpty == true) ? 0 : 12), child:
+      RichText(textAlign: TextAlign.center, text: TextSpan(style: nameTextStyle, children: [
+        TextSpan(text: _profile?.fullName ?? ''),
+        if (_profile?.pronunciationUrl?.isNotEmpty == true)
+          WidgetSpan(alignment: PlaceholderAlignment.middle, child:
+            DirectoryPronunciationButton(
+              url: _profile?.pronunciationUrl,
+              data: widget.pronunciationAudioData,
+              padding: EdgeInsets.symmetric(horizontal: 13, vertical: 12),
+            ),
+          ),
+      ])),
+    ),
+  if (_profile?.pronouns?.isNotEmpty == true)
+    Text(_profile?.pronouns ?? '', style: Styles().textStyles.getTextStyle('widget.detail.small'), textAlign: TextAlign.center,),
+  ],);
 
-  // ignore: unused_element
   Widget get _shareButton => Row(children: [
     Padding(padding: EdgeInsets.only(right: 4), child:
       Styles().images.getImage('share', size: 14) ?? Container()
     ),
     Expanded(child:
       LinkButton(
-        title: AppTextUtils.appTitleString('panel.profile.info.command.link.share.text', 'Share my info outside the ${AppTextUtils.appTitleMacro} app'),
+        title: Localization().getStringEx('panel.profile.info.command.link.share.text', 'Share My Info'),
         textStyle: Styles().textStyles.getTextStyle('widget.button.title.small.underline'),
         textAlign: TextAlign.left,
         padding: EdgeInsets.symmetric(vertical: 16),
@@ -125,8 +132,29 @@ class _ProfileInfoPreviewPageState extends ProfileDirectoryMyInfoBasePageState<P
 
   void _onShare() {
     Analytics().logSelect(target: 'Share');
+    ProfileInfoSharePanel.present(context,
+      profile: _profile,
+      photoImageData: widget.photoImageData,
+      pronunciationAudioData: widget.pronunciationAudioData,
+    );
   }
 
   Set<Auth2FieldVisibility> get _permittedVisibility =>
-    super.permittedVisibility(widget.contentType);
+    widget.contentType.permitedVisibility;
+}
+
+extension _Auth2UserProfileUtils on Auth2UserProfile {
+  bool get isNotEmpty =>
+    (photoUrl?.isNotEmpty == true) ||
+    (firstName?.isNotEmpty == true) ||
+    (middleName?.isNotEmpty == true) ||
+    (lastName?.isNotEmpty == true) ||
+    (title?.isNotEmpty == true) ||
+    (college?.isNotEmpty == true) ||
+    (department?.isNotEmpty == true) ||
+    (major?.isNotEmpty == true) ||
+    (email?.isNotEmpty == true) ||
+    (email2?.isNotEmpty == true) ||
+    (phone?.isNotEmpty == true) ||
+    (website?.isNotEmpty == true);
 }
