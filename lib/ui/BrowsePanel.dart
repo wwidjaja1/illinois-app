@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:collection';
-import 'dart:io';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/cupertino.dart';
@@ -20,7 +19,6 @@ import 'package:illinois/service/Guide.dart';
 import 'package:illinois/service/RadioPlayer.dart';
 import 'package:illinois/service/Storage.dart';
 import 'package:illinois/ui/SavedPanel.dart';
-import 'package:illinois/ui/WebPanel.dart';
 import 'package:illinois/ui/appointments/AppointmentsContentWidget.dart';
 import 'package:illinois/ui/academics/AcademicsHomePanel.dart';
 import 'package:illinois/ui/academics/StudentCourses.dart';
@@ -65,7 +63,6 @@ import 'package:rokwire_plugin/service/styles.dart';
 import 'package:rokwire_plugin/ui/panels/modal_image_holder.dart';
 import 'package:rokwire_plugin/ui/widgets/triangle_painter.dart';
 import 'package:rokwire_plugin/utils/utils.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 ///////////////////////////
 // BrowsePanel
@@ -923,7 +920,12 @@ class _BrowseEntry extends StatelessWidget {
 
   static void _onTapSafewalkRequest(BuildContext context) {
     Analytics().logSelect(target: "Request a SafeWalk");
-    Navigator.push(context, CupertinoPageRoute(builder: (context) => SafetyHomePanel()));
+    if (FlexUI().isSafeWalkAvailable) {
+      Navigator.push(context, CupertinoPageRoute(builder: (context) => SafetyHomePanel()));
+    }
+    else {
+      AppAlert.showDialogResult(context, Localization().getStringEx("model.safety.safewalks.not_available.text", "SafeWalk feature is not currently available."));
+    }
   }
 
   static void _onTapSafeRides(BuildContext context) {
@@ -932,16 +934,25 @@ class _BrowseEntry extends StatelessWidget {
     if (safeRidesGuideEntry != null) {
       Navigator.push(context, CupertinoPageRoute(builder: (context) => GuideDetailPanel(guideEntry: safeRidesGuideEntry)));
     }
+    else {
+      AppAlert.showDialogResult(context, Localization().getStringEx("model.safety.saferides.not_available.text", "SafeRides feature is not currently available."));
+    }
   }
 
   static void _onTapSafetyResources(BuildContext context) {
     Analytics().logSelect(target: "Safety Resources");
-    Navigator.push(context, CupertinoPageRoute(builder: (context) => GuideListPanel(
-      contentList: Guide().safetyResourcesList,
-      contentTitle: Localization().getStringEx('panel.guide_list.label.safety_resources.section', 'Safety Resources'),
-      contentEmptyMessage: Localization().getStringEx("panel.guide_list.label.safety_resources.empty", "There are no active Campus Safety Resources."),
-      favoriteKey: GuideFavorite.constructFavoriteKeyName(contentType: Guide.campusSafetyResourceContentType),
-    )));
+    List<Map<String, dynamic>>? safetyResourcesList = Guide().safetyResourcesList;
+    if (CollectionUtils.isNotEmpty(safetyResourcesList)) {
+      Navigator.push(context, CupertinoPageRoute(builder: (context) => GuideListPanel(
+        contentList: safetyResourcesList,
+        contentTitle: Localization().getStringEx('panel.guide_list.label.campus_safety_resources.section', 'Safety Resources'),
+        contentEmptyMessage: Localization().getStringEx("panel.guide_list.label.campus_safety_resources.empty", "There are no active Campus Safety Resources."),
+        favoriteKey: GuideFavorite.constructFavoriteKeyName(contentType: Guide.campusSafetyResourceContentType),
+      )));
+    }
+    else {
+      AppAlert.showDialogResult(context, Localization().getStringEx("model.safety.safety_resources.not_available.text", "Safety Resources are not currently available."));
+    }
   }
 
   static void _onTapPublicSurveys(BuildContext context) {
@@ -1009,14 +1020,9 @@ class _BrowseEntry extends StatelessWidget {
       if (DeepLink().isAppUrl(url)) {
         DeepLink().launchUrl(url);
       }
-      else if (launchInternal && UrlUtils.launchInternal(url)){
-        Navigator.push(context, CupertinoPageRoute(builder: (context) => WebPanel(url: url)));
-      }
       else {
-        Uri? uri = Uri.tryParse(url!);
-        if (uri != null) {
-          launchUrl(uri, mode: (Platform.isAndroid ? LaunchMode.externalApplication : LaunchMode.platformDefault));
-        }
+        bool tryInternal = launchInternal && UrlUtils.canLaunchInternal(url);
+        AppLaunchUrl.launch(context: context, url: url, tryInternal: tryInternal);
       }
     }
   }
