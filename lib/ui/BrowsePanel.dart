@@ -641,6 +641,8 @@ class _BrowseEntry extends StatelessWidget {
       case "safety.saferides":               _onTapSafeRides(context); break;
       case "safety.safety_resources":        _onTapSafetyResources(context); break;
 
+      case "sex_based_misconduct.survey":    _onTapSexBasedMisconductRequest(context); break;
+
       case "surveys.public_surveys":         _onTapPublicSurveys(context); break;
 
       case "wallet.illini_cash_card":        _onTapIlliniCash(context); break;
@@ -926,6 +928,11 @@ class _BrowseEntry extends StatelessWidget {
     else {
       AppAlert.showDialogResult(context, Localization().getStringEx("model.safety.safewalks.not_available.text", "SafeWalk feature is not currently available."));
     }
+  }
+
+  static void _onTapSexBasedMisconductRequest(BuildContext context) {
+    Analytics().logSelect(target: "Open questionnaire");
+    Navigator.push(context, CupertinoPageRoute(builder: (context) => HomeSexBasedMisconductWidget()));
   }
 
   static void _onTapSafeRides(BuildContext context) {
