@@ -48,6 +48,7 @@ import 'package:illinois/ui/home/HomeRecentPollsWidget.dart';
 import 'package:illinois/ui/home/HomeResearchProjectsWidget.dart';
 import 'package:illinois/ui/home/HomeSafeRidesWidget.dart';
 import 'package:illinois/ui/home/HomeSafeWalkRequestWidget.dart';
+import 'package:illinois/ui/home/HomeSexBasedMisconductWidget.dart';
 import 'package:illinois/ui/home/HomeStudentCoursesWidget.dart';
 import 'package:illinois/ui/home/HomeToutWidget.dart';
 import 'package:illinois/ui/home/HomeRadioWidget.dart';
@@ -293,6 +294,15 @@ class HomePanel extends StatefulWidget with AnalyticsInfo {
         return HomeLaundryWidget.handle(key: _globalKey(globalKeys, code), favoriteId: code, dragAndDropHost: dragAndDropHost, position: position,);
       } else {
         return HomeLaundryWidget(key: _globalKey(globalKeys, code), favoriteId: code, updateController: updateController,);
+      }
+    }
+    else if (code == 'sex_based_misconduct') {
+      if (title) {
+        return HomeSexBasedMisconductWidget.title;
+      } else if (handle) {
+        return HomeSexBasedMisconductWidget.handle(key: _globalKey(globalKeys, code), favoriteId: code, dragAndDropHost: dragAndDropHost, position: position,);
+      } else {
+        return HomeSexBasedMisconductWidget(key: _globalKey(globalKeys, code), favoriteId: code, updateController: updateController,);
       }
     }
     else if (code == 'my_groups') {
