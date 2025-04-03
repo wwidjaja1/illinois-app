@@ -105,12 +105,12 @@ class _WellnessSexBasedMisconductHomeWidgetState extends State<WellnessSexBasedM
     Widget content;
     if (StringUtils.isNotEmpty(Config().healthScreenerSurveyID)) {
       content = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Text(Localization().getStringEx('panel.wellness.sections.health_screener.label.screener.title', 'Not feeling well?'), style: Styles().textStyles.getTextStyle('panel.skills_self_evaluation.get_started.header'), textAlign: TextAlign.left,),
-        Text(Localization().getStringEx('panel.wellness.sections.health_screener.label.screener.subtitle', 'Find the right resources'), style: Styles().textStyles.getTextStyle('panel.skills_self_evaluation.get_started.time.description'), textAlign: TextAlign.left,),
+        Text(Localization().getStringEx('panel.wellness.sections.sex_based_misconduct.menu.title', 'Choose Your Path Forward'), style: Styles().textStyles.getTextStyle('panel.skills_self_evaluation.get_started.header'), textAlign: TextAlign.left,),
+        //Text(Localization().getStringEx('panel.wellness.sections.health_screener.label.screener.subtitle', 'Find the right resources'), style: Styles().textStyles.getTextStyle('panel.skills_self_evaluation.get_started.time.description'), textAlign: TextAlign.left,),
         Padding(padding: EdgeInsets.only(top: 24), child: _buildDescription()),
         Padding(padding: EdgeInsets.only(top: 64, left: 64, right: 80), child: RoundedButton(
-            label: Localization().getStringEx('panel.wellness.sections.health_screener.button.take_screener.title',
-                'Take the Screener'),
+            label: Localization().getStringEx('panel.wellness.sections.sex_based_misconduct.menu_option_one',
+                'I don\'t know'),
             textStyle: Styles().textStyles.getTextStyle('widget.detail.regular.fat'),
             onTap: _onTapTakeScreener
         )),
@@ -144,11 +144,11 @@ class _WellnessSexBasedMisconductHomeWidgetState extends State<WellnessSexBasedM
 
   Widget _buildDescription() {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(Localization().getStringEx('panel.wellness.sections.health_screener.description.title',
-        'Use the Illinois Health Screener to help you find the right resources'), style: Styles().textStyles.getTextStyle('panel.wellness.sections.health_screener.description'),),
+      Text(Localization().getStringEx('panel.wellness.sections.sex_based_misconduct.menu.paragraph_one',
+        'If you have experienced sex-based misconduct or think you may have experienced it, help is available'), style: Styles().textStyles.getTextStyle('panel.wellness.sections.health_screener.description'),),
       Padding(padding: EdgeInsets.only(top: 8), child: Text(
-        Localization().getStringEx('panel.wellness.sections.health_screener.label.screener.details.text',
-            'Your screening results are confidential unless you choose to share them'),
+        Localization().getStringEx('panel.wellness.sections.sex_based_misconduct.menu.paragraph_two',
+            'It is not your fault, and there are resources on campus and in the community to provide support and help you heal'),
         style: Styles().textStyles.getTextStyle('panel.wellness.sections.health_screener.description'),
       ))
     ]);
@@ -159,7 +159,7 @@ class _WellnessSexBasedMisconductHomeWidgetState extends State<WellnessSexBasedM
     return <Widget>[
       RibbonButton(
         leftIconKey: "info",
-        label: saveEnabled ? Localization().getStringEx("panel.wellness.sections.health_screener.body.save.description", "Your results will be saved for you to revisit or compare to future results.") :
+        label: saveEnabled ? Localization().getStringEx("panel.wellness.sections.sex_based_misconduct.menu_exit", "Privacy: your app activity is not shared with others. Use the quick exit icon to return Home") :
         Localization().getStringEx("panel.wellness.sections.health_screener.body.dont_save.description", "Your results will not be saved for you to compare to future results."),
         textStyle: Styles().textStyles.getTextStyle('panel.skills_self_evaluation.content.title'),
         backgroundColor: Colors.transparent,
