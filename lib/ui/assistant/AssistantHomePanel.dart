@@ -18,10 +18,10 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:illinois/model/Assistant.dart';
 import 'package:illinois/service/Analytics.dart';
+import 'package:illinois/service/Assistant.dart';
 import 'package:illinois/service/Auth2.dart';
 import 'package:illinois/service/FlexUI.dart';
 import 'package:illinois/ui/assistant/AssistantConversationContentWidget.dart';
-import 'package:illinois/ui/assistant/AssistantFaqsContentWidget.dart';
 import 'package:illinois/ui/assistant/AssistantProvidersConversationContentWidget.dart';
 import 'package:illinois/ui/widgets/LinkButton.dart';
 import 'package:illinois/utils/AppUtils.dart';
@@ -32,7 +32,7 @@ import 'package:rokwire_plugin/service/styles.dart';
 import 'package:rokwire_plugin/ui/widgets/ribbon_button.dart';
 import 'package:rokwire_plugin/utils/utils.dart';
 
-enum AssistantContent { uiuc_conversation, google_conversation, grok_conversation, all_assistants, faqs }
+enum AssistantContent { google_conversation, grok_conversation, perplexity_conversation, openai_conversation, all_assistants }
 
 class AssistantHomePanel extends StatefulWidget {
   final AssistantContent? content;
@@ -73,7 +73,7 @@ class AssistantHomePanel extends StatefulWidget {
   }
 }
 
-class _AssistantHomePanelState extends State<AssistantHomePanel> implements NotificationsListener {
+class _AssistantHomePanelState extends State<AssistantHomePanel> with NotificationsListener {
   late List<AssistantContent> _contentTypes;
   AssistantContent? _selectedContent;
   static AssistantContent? _lastSelectedContent;
@@ -90,6 +90,7 @@ class _AssistantHomePanelState extends State<AssistantHomePanel> implements Noti
     NotificationService().subscribe(this, [
       Auth2.notifyLoginChanged,
       FlexUI.notifyChanged,
+      Assistant.notifyProvidersChanged,
     ]);
 
     _contentTypes = _buildAssistantContentTypes();
@@ -122,6 +123,8 @@ class _AssistantHomePanelState extends State<AssistantHomePanel> implements Noti
       _updateContentTypes();
     } else if (name == FlexUI.notifyChanged) {
       _updateContentTypes();
+    } else if (name == Assistant.notifyProvidersChanged) {
+      _updateContentTypes();
     }
   }
 
@@ -141,7 +144,8 @@ class _AssistantHomePanelState extends State<AssistantHomePanel> implements Noti
                     padding: EdgeInsets.only(left: 16),
                     child: Text(Localization().getStringEx('panel.assistant.header.title', 'Illinois Assistant'),
                         style: Styles().textStyles.getTextStyle("widget.label.medium.fat"))))),
-            Visibility(visible: (_selectedContent == AssistantContent.uiuc_conversation), child: LinkButton(onTap: _onTapClearAll, title: Localization().getStringEx('panel.assistant.clear_all.label', 'Clear All'), fontSize: 14)),
+            // was: visible: (_selectedContent == AssistantContent.uiuc_conversation)
+            Visibility(visible: false, child: LinkButton(onTap: _onTapClearAll, title: Localization().getStringEx('panel.assistant.clear_all.label', 'Clear All'), fontSize: 14)),
             Semantics(
                 label: Localization().getStringEx('dialog.close.title', 'Close'),
                 hint: Localization().getStringEx('dialog.close.hint', ''),
@@ -180,7 +184,7 @@ class _AssistantHomePanelState extends State<AssistantHomePanel> implements Noti
   }
 
   Widget _buildContent() {
-    return Stack(children: [(_contentWidget ?? Container()), Container(height: _contentHeight), _buildContentValuesContainer()]);
+    return Stack(children: [(_contentWidget ?? _buildMissingContentWidget()), Container(height: _contentHeight), _buildContentValuesContainer()]);
   }
 
   Widget _buildContentValuesContainer() {
@@ -193,6 +197,10 @@ class _AssistantHomePanelState extends State<AssistantHomePanel> implements Noti
     return Positioned.fill(
         child:
             BlockSemantics(child: GestureDetector(onTap: _onTapDismissLayer, child: Container(color: Styles().colors.blackTransparent06))));
+  }
+
+  Widget _buildMissingContentWidget() {
+    return Positioned.fill(child: Center(child: Text(Localization().getStringEx('panel.assistant.content.missing.assistant.msg', 'There is no assistant available.'), style: Styles().textStyles.getTextStyle('widget.message.medium.thin'))));
   }
 
   Widget _buildContentValuesWidget() {
@@ -270,30 +278,31 @@ class _AssistantHomePanelState extends State<AssistantHomePanel> implements Noti
 
   List<AssistantContent> _buildAssistantContentTypes() {
     List<AssistantContent> contentTypes = <AssistantContent>[];
-    List<String>? contentCodes = JsonUtils.listStringsValue(FlexUI()['assistant']);
-    if (contentCodes != null) {
-      for (String code in contentCodes) {
-        AssistantContent? value = _assistantContentFromString(code);
+    List<AssistantProvider>? availableProviders = Assistant().providers;
+    if (availableProviders != null) {
+      for (AssistantProvider provider in availableProviders) {
+        AssistantContent? value = _assistantContentFromProvider(provider);
         if (value != null) {
           contentTypes.add(value);
         }
+      }
+      if (contentTypes.length > 1) {
+        contentTypes.add(AssistantContent.all_assistants);
       }
     }
     return contentTypes;
   }
 
-  AssistantContent? _assistantContentFromString(String? value) {
-    switch (value) {
-      case 'uiuc_assistant':
-        return AssistantContent.uiuc_conversation;
-      case 'google_assistant':
+  AssistantContent? _assistantContentFromProvider(AssistantProvider? provider) {
+    switch (provider) {
+      case AssistantProvider.google:
         return AssistantContent.google_conversation;
-      case 'grok_assistant':
+      case AssistantProvider.grok:
         return AssistantContent.grok_conversation;
-      case 'all_assistants':
-        return AssistantContent.all_assistants;
-      case 'uiuc_faqs':
-        return AssistantContent.faqs;
+      case AssistantProvider.perplexity:
+        return AssistantContent.perplexity_conversation;
+      case AssistantProvider.openai:
+        return AssistantContent.openai_conversation;
       default:
         return null;
     }
@@ -313,16 +322,16 @@ class _AssistantHomePanelState extends State<AssistantHomePanel> implements Noti
 
   Widget? get _contentWidget {
     switch (_selectedContent) {
-      case AssistantContent.uiuc_conversation:
-        return AssistantConversationContentWidget(shouldClearAllMessages: _clearMessagesNotifier.stream, provider: _selectedProvider,);
       case AssistantContent.google_conversation:
         return AssistantConversationContentWidget(shouldClearAllMessages: _clearMessagesNotifier.stream, provider: _selectedProvider);
       case AssistantContent.grok_conversation:
         return AssistantConversationContentWidget(shouldClearAllMessages: _clearMessagesNotifier.stream, provider: _selectedProvider);
+      case AssistantContent.perplexity_conversation:
+        return AssistantConversationContentWidget(shouldClearAllMessages: _clearMessagesNotifier.stream, provider: _selectedProvider);
+      case AssistantContent.openai_conversation:
+        return AssistantConversationContentWidget(shouldClearAllMessages: _clearMessagesNotifier.stream, provider: _selectedProvider);
       case AssistantContent.all_assistants:
         return AssistantProvidersConversationContentWidget();
-      case AssistantContent.faqs:
-        return AssistantFaqsContentWidget();
       default:
         return null;
     }
@@ -330,33 +339,35 @@ class _AssistantHomePanelState extends State<AssistantHomePanel> implements Noti
 
   String? _getContentItemName(AssistantContent? contentItem) {
     switch (contentItem) {
-      case AssistantContent.uiuc_conversation:
-        return Localization().getStringEx('panel.assistant.content.conversation.label', 'Ask the Illinois Assistant');
       case AssistantContent.google_conversation:
         return Localization().getStringEx('panel.assistant.content.conversation.google.label', 'Ask the Google Assistant');
       case AssistantContent.grok_conversation:
         return Localization().getStringEx('panel.assistant.content.conversation.grok.label', 'Ask the Grok Assistant');
+      case AssistantContent.perplexity_conversation:
+        return Localization().getStringEx('panel.assistant.content.conversation.perplexity.label', 'Ask the Perplexity Assistant');
+      case AssistantContent.openai_conversation:
+        return Localization().getStringEx('panel.assistant.content.conversation.openai.label', 'Ask the Open AI Assistant');
       case AssistantContent.all_assistants:
         return Localization().getStringEx('panel.assistant.content.conversation.all.label', 'Use All Assistants',);
-      case AssistantContent.faqs:
-        return Localization().getStringEx('panel.assistant.content.faqs.label', 'Illinois Assistant FAQs');
       default:
         return null;
     }
   }
 
-  AssistantProvider get _selectedProvider {
+  AssistantProvider? get _selectedProvider {
     switch (_selectedContent) {
-      case AssistantContent.uiuc_conversation:
-        return AssistantProvider.uiuc;
       case AssistantContent.google_conversation:
         return AssistantProvider.google;
       case AssistantContent.grok_conversation:
         return AssistantProvider.grok;
+      case AssistantContent.perplexity_conversation:
+        return AssistantProvider.perplexity;
+      case AssistantContent.openai_conversation:
+        return AssistantProvider.openai;
       default:
-        return AssistantProvider.uiuc;
+        return null;
     }
   }
 
-  AssistantContent? get _initialSelectedContent => AssistantContent.uiuc_conversation;
+  AssistantContent? get _initialSelectedContent => CollectionUtils.isNotEmpty(_contentTypes) ? _contentTypes.first : null;
 }

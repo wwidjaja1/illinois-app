@@ -69,13 +69,13 @@ class HomeRecentItemsWidget extends StatefulWidget {
     HomeHandleWidget(key: key, favoriteId: favoriteId, dragAndDropHost: dragAndDropHost, position: position,
       title: title,
     );
-  static String get title => Localization().getStringEx('widget.home.recent_items.label.header.title', 'Recently Viewed');
+  static String get title => Localization().getStringEx('widget.home.recent_items.label.header.title', 'Visited Recently');
 
   @override
   _HomeRecentItemsWidgetState createState() => _HomeRecentItemsWidgetState();
 }
 
-class _HomeRecentItemsWidgetState extends State<HomeRecentItemsWidget> implements NotificationsListener {
+class _HomeRecentItemsWidgetState extends State<HomeRecentItemsWidget> with NotificationsListener {
 
   Iterable<RecentItem>? _recentItems;
   
@@ -171,8 +171,8 @@ class _HomeRecentItemsWidgetState extends State<HomeRecentItemsWidget> implement
   Widget _buildContent() {
     return (_recentItems?.isNotEmpty == true) ? _buildRecentContent() : HomeMessageCard(
       message: (Storage().recentItemsEnabled != false) ?
-        Localization().getStringEx("widget.home.recent_items.text.empty.description", "There is no recently viewed app content to display.") :
-      Localization().getStringEx("widget.home.recent_items.text.disabled.description", "Displaying recently viewed app content is turned off."),
+        Localization().getStringEx("widget.home.recent_items.text.empty.description", "There is no visited recently app content to display.") :
+      Localization().getStringEx("widget.home.recent_items.text.disabled.description", "Displaying visited recently app content is turned off."),
     );
   }
 
@@ -271,7 +271,7 @@ class HomeRecentItemsPanel extends StatefulWidget {
   _HomeRecentItemsPanelState createState() => _HomeRecentItemsPanelState();
 }
 
-class _HomeRecentItemsPanelState extends State<HomeRecentItemsPanel> implements NotificationsListener {
+class _HomeRecentItemsPanelState extends State<HomeRecentItemsPanel> with NotificationsListener {
 
   Iterable<RecentItem>? _recentItems;
 
@@ -315,7 +315,7 @@ class _HomeRecentItemsPanelState extends State<HomeRecentItemsPanel> implements 
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: HeaderBar(
-        title: Localization().getStringEx('widget.home.recent_items.label.header.title', 'Recently Viewed'),
+        title: Localization().getStringEx('widget.home.recent_items.label.header.title', 'Visited Recently'),
         actions: [
           if (_recentItems?.isNotEmpty == true)
             _clearAllButton
@@ -342,8 +342,8 @@ class _HomeRecentItemsPanelState extends State<HomeRecentItemsPanel> implements 
   List<Widget> _buildPanelContent() {
     return (_recentItems?.isNotEmpty == true) ? _buildListItems() :
       [_buildMessageContent((Storage().recentItemsEnabled != false) ?
-        Localization().getStringEx("widget.home.recent_items.text.empty.description", "There is no recently viewed app content to display.") :
-        Localization().getStringEx("widget.home.recent_items.text.disabled.description", "Displaying recently viewed app content is turned off."),
+        Localization().getStringEx("widget.home.recent_items.text.empty.description", "There is no visited recently app content to display.") :
+        Localization().getStringEx("widget.home.recent_items.text.disabled.description", "Displaying visited recently app content is turned off."),
       )];
   }
 
@@ -427,7 +427,7 @@ class HomeRecentItemCard extends StatefulWidget {
   _HomeRecentItemCardState createState() => _HomeRecentItemCardState();
 }
 
-class _HomeRecentItemCardState extends State<HomeRecentItemCard> implements NotificationsListener {
+class _HomeRecentItemCardState extends State<HomeRecentItemCard> with NotificationsListener {
 
   @override
   void initState() {
