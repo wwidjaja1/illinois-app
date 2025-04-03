@@ -2631,6 +2631,15 @@
 
     "panel.wellness.home.header.title": "Health & Wellness",
     "panel.wellness.home.eight_dimensions.header.title": "8 Dimensions of Wellness",
+	
+    "panel.wellness.section.sex_based_misconduct.label": "Sex Based Misconduct Survey",
+    "panel.browse.entry.wellness.sex_based_misconduct.title": "Sex Based Misconduct Survey",
+    "panel.wellness.sections.sex_based_misconduct.menu_option_one": "I don't know",
+    "panel.wellness.sections.sex_based_misconduct.menu.title": "Choose Your Path Forward",
+    "panel.wellness.sections.sex_based_misconduct.menu.paragraph_one": "If you have experienced sex-based misconduct or think you may have experienced it, help is available",
+    "panel.wellness.sections.sex_based_misconduct.menu.paragraph_two": "It is not your fault, and there are resources on campus and in the community to provide support and help you heal",
+    "panel.wellness.sections.sex_based_misconduct.menu_exit": "Privacy: your app activity is not shared with others. Use the quick exit icon to return Home",
+    "panel.wellness.sections.sex_based_misconduct.general_exit": "Privacy: your app activity is not shared with others.",
 
     "panel.debug.header.title": "Debug",
 
