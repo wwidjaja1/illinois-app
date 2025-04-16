@@ -67,8 +67,7 @@ class _DisplayFloorPlanPanelState extends State<DisplayFloorPlanPanel> {
       widget.building?.number ?? '',
       floorId: floorCode,
     );
-
-    // Assuming floorPlanSvg contains your SVG string
+    
     String? floorPlanSvg = floorPlanData?['svg'] ?? null;
     String? addButtonsPerAmenity = """
 <!DOCTYPE html>
