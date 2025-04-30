@@ -67,7 +67,8 @@ class _DisplayFloorPlanPanelState extends State<DisplayFloorPlanPanel> {
       widget.building?.number ?? '',
       floorId: floorCode,
     );
-    
+
+    // Assuming floorPlanSvg contains your SVG string
     String? floorPlanSvg = floorPlanData?['svg'] ?? null;
     String? addButtonsPerAmenity = """
 <!DOCTYPE html>
@@ -163,8 +164,7 @@ class _DisplayFloorPlanPanelState extends State<DisplayFloorPlanPanel> {
           }
         });
 
-        button.style.backgroundColor =
-          button.style.backgroundColor === "green" ? "" : "green";
+        button.classList.toggle("active");
 
         const serializer = new XMLSerializer();
         const updatedFloorPlanSvg = serializer.serializeToString(svgDoc);
@@ -172,7 +172,7 @@ class _DisplayFloorPlanPanelState extends State<DisplayFloorPlanPanel> {
         const svgElement = document.querySelector("#svg-container svg");
         if (svgElement) {
           svgElement.outerHTML = updatedFloorPlanSvg;
-        }
+        }  
       });
 
       buttonsContainer.appendChild(button);
@@ -199,11 +199,12 @@ class _DisplayFloorPlanPanelState extends State<DisplayFloorPlanPanel> {
       align-items: center;
       justify-content: flex-start;
       padding: 10px 15px;
-      border: none;
+      border: 1px solid #e5e5e5;
       cursor: pointer;
       font-size: 14px;
-      background-color: #f0f0f0;
-      transition: background-color 0.3s ease, transform 0.2s ease;
+      background-color: #ffffff;
+      color: #1a3a85;
+      transition: background-color 0.3s, color 0.3s;
       border-radius: 5px;
       box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
     }
@@ -217,10 +218,13 @@ class _DisplayFloorPlanPanelState extends State<DisplayFloorPlanPanel> {
       width: 30px;
       height: auto;
       margin-right: 10px; /* Space between icon and text */
+      border: 1.5px solid #ffffff; /* white outline */
+      box-shadow: 0px 0px 2px rgba(0, 0, 0, 0.2);
     }
 
-    .icon-button:active {
-      background-color: #d0d0d0; /* Active state */
+    .icon-button.active {
+      background-color: #1a3a85;   /* Navy blue */
+      color: #ffffff;              /* White text for contrast */
     }
   </style>
 </body>
