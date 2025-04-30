@@ -201,7 +201,7 @@ class _DisplayFloorPlanPanelState extends State<DisplayFloorPlanPanel> {
       border: 1px solid #e5e5e5;
       cursor: pointer;
       font-size: 14px;
-      background-color: #1a3a85;
+      background-color: #002855;
       color: #ffffff;
       transition: background-color 0.3s, color 0.3s;
       border-radius: 5px;
@@ -223,7 +223,7 @@ class _DisplayFloorPlanPanelState extends State<DisplayFloorPlanPanel> {
 
     .icon-button.active {
       background-color: #ffffff;   /* White when pressed */
-      color: #1a3a85;              /* Navy blue text for contrast */
+      color: #002855;              /* Navy blue text for contrast */
     }
   </style>
 </body>
