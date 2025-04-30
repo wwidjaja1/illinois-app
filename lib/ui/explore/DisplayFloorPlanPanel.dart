@@ -68,13 +68,12 @@ class _DisplayFloorPlanPanelState extends State<DisplayFloorPlanPanel> {
       floorId: floorCode,
     );
 
-    // Assuming floorPlanSvg contains your SVG string
     String? floorPlanSvg = floorPlanData?['svg'] ?? null;
     String? addButtonsPerAmenity = """
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Floor Plan</title>
+  <title></title>
 </head>
 <body>
   <!-- Render the SVG -->
@@ -202,8 +201,8 @@ class _DisplayFloorPlanPanelState extends State<DisplayFloorPlanPanel> {
       border: 1px solid #e5e5e5;
       cursor: pointer;
       font-size: 14px;
-      background-color: #ffffff;
-      color: #1a3a85;
+      background-color: #1a3a85;
+      color: #ffffff;
       transition: background-color 0.3s, color 0.3s;
       border-radius: 5px;
       box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
@@ -223,8 +222,8 @@ class _DisplayFloorPlanPanelState extends State<DisplayFloorPlanPanel> {
     }
 
     .icon-button.active {
-      background-color: #1a3a85;   /* Navy blue */
-      color: #ffffff;              /* White text for contrast */
+      background-color: #ffffff;   /* White when pressed */
+      color: #1a3a85;              /* Navy blue text for contrast */
     }
   </style>
 </body>
@@ -233,7 +232,6 @@ class _DisplayFloorPlanPanelState extends State<DisplayFloorPlanPanel> {
 
 </html>
 """;
-    debugPrint(addButtonsPerAmenity);
 
     if (!mounted) return;
     setState(() {
@@ -241,7 +239,7 @@ class _DisplayFloorPlanPanelState extends State<DisplayFloorPlanPanel> {
       if (floorPlanSvg == null) {
         _htmlWithFloorPlan = '${Localization().getStringEx('panel.display_floor_plan_panel.html_svg_header', 'Floor Plan')} ${Localization().getStringEx('panel.display_floor_plan_panel.html_error', 'No Floor Plan')} ${Localization().getStringEx('panel.display_floor_plan_panel.html_svg_footer', 'Floor Plan')}';
       } else {
-        _htmlWithFloorPlan = '$addButtonsPerAmenity ${Localization().getStringEx('panel.display_floor_plan_panel.html_svg_footer', 'Floor Plan')}';
+        _htmlWithFloorPlan = '$addButtonsPerAmenity';
       }
       _controller.loadHtmlString(_htmlWithFloorPlan);
     });
