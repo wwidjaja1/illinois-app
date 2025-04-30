@@ -185,7 +185,7 @@ class _DisplayFloorPlanPanelState extends State<DisplayFloorPlanPanel> {
     /* Style for buttons container */
     .buttons-container {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      grid-template-columns: repeat(2, 1fr); /* Two columns */
       gap: 10px;
       padding: 20px;
       max-width: 800px;
