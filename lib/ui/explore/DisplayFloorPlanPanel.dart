@@ -175,6 +175,8 @@ class _DisplayFloorPlanPanelState extends State<DisplayFloorPlanPanel> {
       });
 
       buttonsContainer.appendChild(button);
+      // Simulate a click to untoggle and hide icons
+      button.click();
     });
 
     document.body.appendChild(buttonsContainer);
