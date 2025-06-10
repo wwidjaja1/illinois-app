@@ -90,9 +90,10 @@ class GroupDetailPanel extends StatefulWidget with AnalyticsInfo {
   final Group? group;
   final String? groupIdentifier;
   final String? groupPostId;
+  final String? groupPostCommentId;
   final AnalyticsFeature? _analyticsFeature;
 
-  GroupDetailPanel({this.group, this.groupIdentifier, this.groupPostId, AnalyticsFeature? analyticsFeature}) :
+  GroupDetailPanel({this.group, this.groupIdentifier, this.groupPostId, AnalyticsFeature? analyticsFeature, this.groupPostCommentId}) :
     _analyticsFeature = analyticsFeature;
 
   @override
@@ -103,14 +104,16 @@ class GroupDetailPanel extends StatefulWidget with AnalyticsInfo {
 
   @override
   Map<String, dynamic>? get analyticsPageAttributes =>
-    group?.analyticsAttributes;
+    _theGroup?.analyticsAttributes;
 
   String? get groupId => group?.id ?? groupIdentifier;
+  Group? get _theGroup => _GroupDetailPanelState.instance?._group ?? group ?? ((groupIdentifier != null) ? Group(id: groupIdentifier) : null);
 
   AnalyticsFeature? get _defaultAnalyticsFeature => (group?.researchProject == true) ? AnalyticsFeature.ResearchProject : AnalyticsFeature.Groups;
 }
 
 class _GroupDetailPanelState extends State<GroupDetailPanel> with NotificationsListener, TickerProviderStateMixin  {
+  static const String       _stateAccess  = "edu.illinois.rokwire.group_detail.state.access";
   static const int          _postsPageSize = 8;
   static const int          _animationDurationInMilliSeconds = 200;
   static const List<DetailTab> _adminTabs = [DetailTab.ScheduledPosts, DetailTab.PastEvents];
@@ -248,9 +251,22 @@ class _GroupDetailPanelState extends State<GroupDetailPanel> with NotificationsL
 
   ContentAttributes? get _contentAttributes => Groups().contentAttributes(researchProject: _isResearchProject);
 
+  static _GroupDetailPanelState? get instance {
+    Set<NotificationsListener>? subscribers = NotificationService().subscribers(_stateAccess);
+    if (subscribers != null) {
+      for (NotificationsListener subscriber in subscribers) {
+        if ((subscriber is _GroupDetailPanelState) && subscriber.mounted) {
+          return subscriber;
+        }
+      }
+    }
+    return null;
+  }
+
   @override
   void initState() {
     NotificationService().subscribe(this, [
+      _stateAccess,
       AppLivecycle.notifyStateChanged,
       Connectivity.notifyStatusChanged,
       FlexUI.notifyChanged,
@@ -429,7 +445,7 @@ class _GroupDetailPanelState extends State<GroupDetailPanel> with NotificationsL
         _postId = null; // Clear _postId in order not to redirect on the next group load.
         _decreaseProgress();
         if (post != null) {
-          Navigator.push(context, CupertinoPageRoute(builder: (context) => GroupPostDetailPanel(group: _group!, post: post, analyticsFeature: widget.analyticsFeature)));
+          Navigator.push(context, CupertinoPageRoute(builder: (context) => GroupPostDetailPanel(group: _group!, post: post, visibleCommentId: widget.groupPostCommentId, analyticsFeature: widget.analyticsFeature)));
         }
       });
     }
@@ -1706,7 +1722,8 @@ class _GroupEventsState extends State<_GroupEventsContent> with  NotificationsLi
     if (CollectionUtils.isNotEmpty(_groupEvents)) {
       for (Event2 groupEvent in _groupEvents!) {
         content.add(Padding(padding: EdgeInsets.only(bottom: 16),
-            child: Event2Card(groupEvent, group: widget.group,
+            child: Event2Card(key: ObjectKey(groupEvent),
+                groupEvent, group: widget.group,
                 onTap: () => _onTapEvent(groupEvent))));
       }
 
@@ -1898,7 +1915,7 @@ class _GroupPostsState extends State<_GroupPostsContent> with NotificationsListe
     ]);
   }
 
-  List<Widget> _buildPostCardsContent({required List<Post> posts, List<Post>? exclude, GlobalKey? lastPostKey,}){
+  List<Widget> _buildPostCardsContent({required List<Post> posts, List<Post>? exclude}){
     Iterable<String?>? excludeIds = exclude?.map((post) => post.id);
     List<Widget> content = [];
     for (int i = 0; i <posts.length ; i++) {
@@ -1911,7 +1928,7 @@ class _GroupPostsState extends State<_GroupPostsContent> with NotificationsListe
       }
 
       content.add(GroupPostCard(
-        key: (i == 0) ? lastPostKey : null,
+        key: ObjectKey(post),
         post: post,
         group: _group!,
         analyticsFeature: widget.analyticsFeature,
@@ -2139,7 +2156,7 @@ class _GroupPollsState extends State<_GroupPollsContent> with NotificationsListe
       for (Poll? groupPoll in _groupPolls!) {
         if (groupPoll != null) {
           pollsContentList.add(Container(height: 10));
-          pollsContentList.add(GroupPollCard(poll: groupPoll, group: _group, isAdmin: widget.groupAdmins?.map((Member admin) => admin.userId == groupPoll.creatorUserUuid).isNotEmpty,));
+          pollsContentList.add(GroupPollCard(key: ObjectKey(groupPoll), poll: groupPoll, group: _group, isAdmin: widget.groupAdmins?.map((Member admin) => admin.userId == groupPoll.creatorUserUuid).isNotEmpty,));
         }
       }
 
@@ -2180,10 +2197,13 @@ class _GroupPollsState extends State<_GroupPollsContent> with NotificationsListe
 
   Future<void> _loadPolls() async {
     if (StringUtils.isNotEmpty(_groupId) && _group!.currentUserIsMemberOrAdmin) {
-      _setPollsLoading(true);
-      Polls().getGroupPolls(groupIds: {_groupId!})!.then((result) {
-        _groupPolls = (result != null) ? result.polls : null;
-        _setPollsLoading(false);
+      setStateIfMounted(() {
+        _pollsLoading = true;
+      });
+      dynamic result = await _group?.loadPolls();
+      setStateIfMounted(() {
+        _groupPolls = (result is PollsChunk) ? result.polls : null;
+        _pollsLoading = false;
       });
     }
   }
@@ -2193,22 +2213,14 @@ class _GroupPollsState extends State<_GroupPollsContent> with NotificationsListe
   }
 
   void _onPollUpdated(String? pollId) {
-    if(pollId!= null && _groupPolls!=null
-        && _groupPolls?.firstWhere((element) => pollId == element.pollId) != null) { //This is Group poll
+    if ((pollId != null) && (_groupPolls != null) && (_groupPolls?.firstWhere((element) => (pollId == element.pollId)) != null)) { //This is Group poll
 
       Poll? poll = Polls().getPoll(pollId: pollId);
       if (poll != null) {
-        setState(() {
+        setStateIfMounted(() {
           _updatePollInList(poll);
         });
       }
-    }
-  }
-
-  void _setPollsLoading(bool loading) {
-    _pollsLoading = loading;
-    if (mounted) {
-      setState(() {});
     }
   }
 
@@ -2260,7 +2272,7 @@ class _GroupMessagesContent extends StatefulWidget {
 
 class _GroupMessagesState extends State<_GroupMessagesContent> with NotificationsListener, AutomaticKeepAliveClientMixin<_GroupMessagesContent> {
   List<Post>         _messages = <Post>[];
-  GlobalKey          _lastMessageKey = GlobalKey();
+  GlobalKey?          _lastMessageKey;
   bool?              _refreshingMessages;
   bool?              _loadingMessagesPage;
   bool?              _hasMoreMessages;
@@ -2299,7 +2311,9 @@ class _GroupMessagesState extends State<_GroupMessagesContent> with Notification
           messagesContent.add(Container(height: 16));
         }
         messagesContent.add(GroupPostCard(
-            key: (i == 0) ? _lastMessageKey : null,
+            key: (i == 0) ?
+              _lastMessageKey = GlobalObjectKey(message) :
+              ObjectKey(message),
             post: message,
             group: _group!,
             isAdmin: widget.groupAdmins?.map((Member admin) => admin.userId == message.creatorId).isNotEmpty,
@@ -2489,7 +2503,7 @@ class _GroupScheduledPostsContent extends StatefulWidget {
 
 class _GroupScheduledPostsState extends State<_GroupScheduledPostsContent> with NotificationsListener, AutomaticKeepAliveClientMixin<_GroupScheduledPostsContent> {
   List<Post> _scheduledPosts = <Post>[];
-  GlobalKey _lastScheduledPostKey = GlobalKey();
+  GlobalKey? _lastScheduledPostKey;
   bool? _refreshingScheduledPosts;
   bool? _loadingScheduledPostsPage;
   bool? _hasMoreScheduledPosts;
@@ -2531,7 +2545,9 @@ class _GroupScheduledPostsState extends State<_GroupScheduledPostsContent> with 
         scheduledPostsContent.add(Container(height: 16));
       }
       scheduledPostsContent.add(GroupPostCard(
-          key: (i == 0) ? _lastScheduledPostKey : null,
+          key: (i == 0) ?
+            _lastScheduledPostKey = GlobalObjectKey(post) :
+            ObjectKey(post),
           post: post,
           group: _group!,
           analyticsFeature: widget.analyticsFeature,
