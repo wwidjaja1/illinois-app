@@ -7,6 +7,7 @@ import 'package:illinois/service/Guide.dart';
 import 'package:illinois/ui/guide/GuideDetailPanel.dart';
 import 'package:illinois/ui/guide/GuideListPanel.dart';
 import 'package:illinois/ui/safety/SafetySafeWalkRequestPage.dart';
+import 'package:illinois/ui/safety/SexualMisconductPathwaysPanel.dart';
 import 'package:illinois/ui/widgets/HeaderBar.dart';
 import 'package:illinois/ui/widgets/RibbonButton.dart';
 import 'package:illinois/ui/widgets/TabBar.dart' as uiuc;
@@ -166,6 +167,24 @@ class _SafetyHomePanelState extends State<SafetyHomePanel>  {
       )));
       return true;
     }
+      //If navigating directly to JSON content
+    // else if (contentType == SafetyContentType.sexualMisconductResources) {
+    //   Navigator.push(context, CupertinoPageRoute(builder: (context) => GuideListPanel(
+    //     contentList: Guide().sexualMisconductResourcesList, // Must define this in the Guide service. Add the necessary localization keys for the new text
+    //     contentTitle: Localization().getStringEx('panel.guide_list.label.sexual_misconduct_resources.section', 'Sexual Misconduct Resources'),
+    //     contentEmptyMessage: Localization().getStringEx("panel.guide_list.label.sexual_misconduct_resources.empty", "There are no active Sexual Misconduct Resources."),
+    //     favoriteKey: GuideFavorite.constructFavoriteKeyName(contentType: 'sexual_misconduct_resource'),
+    //   )));
+    //   return true;
+    // }
+
+    else if (contentType == SafetyContentType.sexualMisconductResources) {
+      Navigator.push(context, CupertinoPageRoute(
+        builder: (context) => SexualMisconductPathwaysPanel(),
+      ));
+      return true;
+    }
+
     else {
       return false;
     }
