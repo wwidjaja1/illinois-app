@@ -3322,6 +3322,9 @@
 
     "panel.guide_list.label.highlights.section": "Campus Guide Highlights",
     "panel.guide_list.label.highlights.empty": "There are no active Campus Guide Highlights.",
+    "panel.guide_list.label.sexual_misconduct_resources.section": "Sexual Misconduct Resources",
+    "panel.guide_list.label.sexual_misconduct_resources.empty": "There are no active Sexual Misconduct Resources.",
+    "panel.safety.content_type.sexual_misconduct_resources.label": "Sexual Misconduct Resources",
     "panel.guide_list.label.safety_resources.section": "Safety Resources",
     "panel.guide_list.label.safety_resources.empty": "There are no active Safety Resources.",
     "panel.guide_list.label.campus_reminders.section": "Campus Reminders",
