@@ -5,6 +5,9 @@ import 'package:illinois/ui/widgets/RibbonButton.dart';
 import 'package:illinois/ui/widgets/TabBar.dart' as uiuc;
 import 'package:rokwire_plugin/service/localization.dart';
 import 'package:rokwire_plugin/service/styles.dart';
+import 'package:rokwire_plugin/service/surveys.dart';
+import 'package:rokwire_plugin/model/survey.dart';
+import 'package:illinois/ui/safety/SituationStepPanel.dart';
 
 class SexualMisconductPathwaysPanel extends StatelessWidget {
   @override
@@ -50,6 +53,7 @@ class SexualMisconductPathwaysPanel extends StatelessWidget {
     );
   }
 
+
   void _onTalkToSomeone(BuildContext context) {
     // Navigate to Confidential Resources JSON
   }
@@ -59,7 +63,26 @@ class SexualMisconductPathwaysPanel extends StatelessWidget {
   void _onSupportFriend(BuildContext context) {
     // Navigate to Supporting a Friend Resources
   }
-  void _onNotSure(BuildContext context) {
-    // Navigate to the survey flow
+  void _onNotSure(BuildContext context) async {
+    // Load the survey by its ID
+    Survey? survey = await Surveys().loadSurvey("cabb1338-48df-4299-8c2a-563e021f82ca");
+
+    // Extract the first "situation" step from the JSON
+    SurveyData? situation = survey?.data['situation'];
+
+    if (situation != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => SituationStepPanel(situation: situation),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Unable to load the survey step.")),
+      );
+    }
   }
+
+
 }
