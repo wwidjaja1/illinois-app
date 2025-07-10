@@ -34,6 +34,7 @@ class Guide with Service, NotificationsListener {
   static const String campusReminderContentType = "campus-reminder";
   static const String campusHighlightContentType = "campus-highlight";
   static const String campusSafetyResourceContentType = "campus-safety-resource";
+  static const String sexualMisconductResources = "sexual-misconduct-resource";
   static const String wellnessMentalHealthContentType = "mental-health";
   static const String wellnessCampusRecreationContentType = "campus-recreation";
 
@@ -407,6 +408,24 @@ class Guide with Service, NotificationsListener {
     return null;
   }
 
+  List<Map<String, dynamic>>? get sexualMisconductResourcesList {
+    if (_contentList != null) {
+      List<Map<String, dynamic>> sexualMisconductList = <Map<String, dynamic>>[];
+      for (dynamic entry in _contentList!) {
+        Map<String, dynamic>? guideEntry = JsonUtils.mapValue(entry);
+        if (isEntrySexualMisconductResource(guideEntry)) {
+          sexualMisconductList.add(guideEntry!);
+        }
+      }
+
+      listSortDefault(sexualMisconductList);
+
+      return sexualMisconductList;
+    }
+    return null;
+  }
+
+
   List<Map<String, dynamic>>? get promotedList {
     if (_contentList != null) {
       List<Map<String, dynamic>> promotedList = <Map<String, dynamic>>[];
@@ -436,6 +455,12 @@ class Guide with Service, NotificationsListener {
     Map<String, dynamic>? promotion = (entry != null) ? JsonUtils.mapValue(entryValue(entry, 'promotion')) : null;
     return (promotion != null);
   }
+
+  bool isEntrySexualMisconductResource(Map<String, dynamic>? entry) {
+    //based on the JSON structure of surveys and/or the general content.
+    return (entry != null) && (entry['category'] == 'sexual_misconduct_resource');
+  }
+
 
   static bool _checkPromotionInterval(Map<String, dynamic>? promotion) {
     Map<String, dynamic>? interval = (promotion != null) ? JsonUtils.mapValue(promotion['interval']) : null;
